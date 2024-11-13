@@ -1,5 +1,5 @@
-use crate::AuraType;
 use super::Element;
+use crate::AuraType;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ElementalReaction {
@@ -17,7 +17,9 @@ pub enum ElementalReaction {
 
     Superconduct,
 
-    Bloom, Hyperbloom, Burgeon,
+    Bloom,
+    Hyperbloom,
+    Burgeon,
 
     Burning,
 
@@ -30,7 +32,7 @@ pub enum ElementalReaction {
     ReverseMelt,
 }
 impl ElementalReaction {
-    fn is_amp_reaction(&self) -> bool {
+    pub fn is_amp_reaction(&self) -> bool {
         match *self {
             Self::ForwardVaporize
             | Self::ReverseVaporize
@@ -40,7 +42,7 @@ impl ElementalReaction {
         }
     }
 
-    fn from_elements(aura: AuraType, trigger: Element) -> Option<Self> {
+    pub fn from_elements(aura: AuraType, trigger: Element) -> Option<Self> {
         match (aura, trigger) {
             (AuraType::Electro, Element::Anemo)
             | (AuraType::Hydro, Element::Anemo)
@@ -109,13 +111,4 @@ impl ElementalReaction {
     }
 
     const LV_MULTS: [f32; 100] = [1.0; 100];
-    fn lv_mult(level: f32) -> f32 {
-        ElementalReaction::LV_MULTS[level as usize]
-    }
-
-    fn apply(&self, level: f32, em: f32) {
-        match *self {
-            _ => todo!(),
-        }
-    }
 }

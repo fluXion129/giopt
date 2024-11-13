@@ -1,7 +1,20 @@
+#[derive(Clone, Debug, PartialEq)]
 pub struct Aura {
-    aura_type: AuraType,
+    typ: AuraType,
     gauge: f32,
     gauge_decay_rate: f32,
+}
+impl Aura {
+    pub fn new(typ: AuraType, gauge: f32, gauge_decay_rate: f32) -> Self {
+        Self {
+            typ,
+            gauge,
+            gauge_decay_rate,
+        }
+    }
+    pub fn typ(&self) -> AuraType {
+        self.typ
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

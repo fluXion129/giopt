@@ -1,17 +1,27 @@
+use crate::element::ElementalApplication;
+
 use super::stats::Stat;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Talent {
     typ: Type,
-    scalings: Vec<Stat>
+    elem_app: Option<ElementalApplication>,
+    scalings: Vec<Stat>,
 }
 impl Talent {
-    pub fn new(typ: Type, scalings: Vec<Stat>) -> Self {
-        Self { typ, scalings }
+    pub fn new(typ: Type, elem_app: Option<ElementalApplication>, scalings: Vec<Stat>) -> Self {
+        Self {
+            typ,
+            elem_app,
+            scalings,
+        }
     }
 
     pub fn get_scalings(&self) -> &[Stat] {
         &self.scalings
+    }
+    pub fn application(&self) -> Option<&ElementalApplication> {
+        self.elem_app.as_ref()
     }
 }
 
