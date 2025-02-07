@@ -1,40 +1,7 @@
-#[derive(Clone, Debug, PartialEq)]
-pub struct Aura {
-    typ: AuraType,
-    gauge: f32,
-    gauge_decay_rate: f32,
-}
-impl Aura {
-    pub fn new(typ: AuraType, gauge: f32, gauge_decay_rate: f32) -> Self {
-        Self {
-            typ,
-            gauge,
-            gauge_decay_rate,
-        }
-    }
-    pub fn typ(&self) -> AuraType {
-        self.typ
-    }
-}
+pub mod damage_calculator;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum AuraType {
-    Electro,
-    Dendro,
-    Hydro,
-    Pyro,
-    Cryo,
-    Catalyzed,
-    BloomCore,
-    Frozen,
-    Burning,
-    ElectroCharged,
-}
+pub mod damage;
 
-mod damage_calculator;
+pub mod element;
 
-mod damage;
-
-mod element;
-
-mod character;
+pub mod character;

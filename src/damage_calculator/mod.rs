@@ -1,206 +1,192 @@
 use crate::{
-    character::{stats::Stats, talent::Talent},
-    element::{reaction::ElementalReaction, Element},
-    Aura, AuraType,
+    character::{
+        stats::{Condition, Stats, Type::*},
+        talent::Talent,
+    },
+    element::{
+        reaction::ElementalReaction::{self, *},
+        Aura, GaugedAura,
+    },
 };
 
 enum ReactionEffect {
     Additive(f64),
     Multiplicative(f64),
-    None,
+}
+impl ReactionEffect {
+    /// Multiplies the effect of the reaction, preserving its type
+    fn mult_internal(&self, mult: f64) -> Self {
+        match *self {
+            Self::Additive(x) => Self::Additive(x * mult),
+            Self::Multiplicative(x) => Self::Multiplicative(x * mult),
+        }
+    }
 }
 
+/// Status of the enemy that the damage is being calculated for.
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default)]
-struct EnemyConfig {
-    aura: Option<Aura>,
+pub struct EnemyConfig {
+    aura: Option<GaugedAura>,
     level: usize,
 }
 impl EnemyConfig {
-    fn new(aura: Aura, level: usize) -> Self {
+    pub fn new(aura: GaugedAura, level: usize) -> Self {
         Self {
             aura: Some(aura),
             level,
         }
     }
-    fn aura_type(&self) -> Option<AuraType> {
+    pub fn aura_type(&self) -> Option<Aura> {
         self.aura.as_ref().map(|a| a.typ())
     }
 }
-/// A struct that stores a configuration for calculating damage.
-/// Will be edited as app is used to refer to different methods of aquiring
-/// each component needed for the calculation
-pub struct DamageCalculator<'a> {
+/// A struct that stores all information needed to calculate a damage instance.
+///
+/// The calculate() method is used to evaluate the damage instance. The helper functions
+/// for calculate() are also available to inspect components of the calculation.
+pub struct DamageInstance<'a> {
     stats: &'a Stats,
     talent: &'a Talent,
-    enemy_config: &'a EnemyConfig,
+    target_stats: &'a Stats,
+    target_aura: Option<GaugedAura>,
 }
 
-impl<'a> DamageCalculator<'a> {
-    fn new(stats: &'a Stats, talent: &'a Talent, enemy_config: &'a EnemyConfig) -> Self {
+impl<'a> DamageInstance<'a> {
+    pub fn new(
+        stats: &'a Stats,
+        talent: &'a Talent,
+        target_stats: &'a Stats,
+        target_aura: Option<GaugedAura>,
+    ) -> Self {
         Self {
             stats,
             talent,
-            enemy_config,
+            target_stats,
+            target_aura,
         }
     }
 
-    // caching requires mut, would prefer if was not mut
-    // in order to multithread with caching, I will need to work around this
-    fn calculate(&mut self) -> f64 {
-        let mut result = self.base_dmg();
-        result *= self.base_dmg_mult();
-        result += self.base_dmg_flat();
+    pub fn calculate(&self) -> f64 {
+        let mut result = self.base_dmg() * self.base_dmg_mult() + self.base_dmg_flat();
         match self.rxn_effect() {
-            ReactionEffect::Additive(val) => result += val,
-            ReactionEffect::Multiplicative(val) => result *= val,
-            ReactionEffect::None => (),
+            Some(ReactionEffect::Additive(val)) => result += val,
+            Some(ReactionEffect::Multiplicative(val)) => result *= val,
+            None => (),
         }
-        result *= self.dmg_mult();
-        result *= self.def_mult();
-        result *= self.res_mult();
-        result *= self.crit_mult();
-        result
+        result * self.dmg_mult() * self.def_mult() * self.res_mult() * self.crit_mult()
+    }
+
+    fn conditions_met(&self) -> [Option<Condition>; 3] {
+        [
+            None,
+            Some(Condition::Category(self.talent.category())),
+            Some(Condition::Attribute(
+                self.talent.elem_app().map(|app| app.element()).into(),
+            )),
+        ]
     }
 
     fn base_dmg(&self) -> f64 {
-        self.talent.get_scalings().iter().fold(0.0, |acc, stat| {
-            self.stats.get_stat(stat.typ()) * stat.val()
-        })
+        self.talent
+            .get_scalings()
+            .iter()
+            .map(|s| self.stats.get_stat(s.typ()) * s.val())
+            .sum()
     }
 
     fn base_dmg_mult(&self) -> f64 {
-        1.0
+        self.conditions_met()
+            .into_iter()
+            .fold(1.0, |a, cond| a + self.stats.get_stat(BaseDMGMult(cond)))
     }
 
     fn base_dmg_flat(&self) -> f64 {
-        0.0
+        self.conditions_met()
+            .into_iter()
+            .fold(1.0, |a, cond| a + self.stats.get_stat(BaseDMGFlat(cond)))
     }
 
-    fn rxn_effect(&self) -> ReactionEffect {
-        let Some(aura) = self.enemy_config.aura_type() else {
-            return ReactionEffect::None;
-        };
-        let Some(application) = self.talent.application() else {
-            return ReactionEffect::None;
-        };
-        let Some(reaction) = ElementalReaction::from_elements(aura, application.element()) else {
-            return ReactionEffect::None;
-        };
+    /// Returns the reaction effect for the damage instance
+    fn rxn_effect(&self) -> Option<ReactionEffect> {
+        let rxn = ElementalReaction::from_elements(
+            self.target_aura.as_ref()?.typ(),
+            self.talent.elem_app()?.element(),
+        )?;
+        match rxn {
+            ForwardVaporize | ForwardMelt => Some(ReactionEffect::Multiplicative(2.0)),
+            ReverseVaporize | ReverseMelt => Some(ReactionEffect::Multiplicative(1.5)),
+            Aggravate => Some(ReactionEffect::Additive(
+                1.15 * level_multiplier(self.stats.get_stat(Level)),
+            )),
+            Spread => Some(ReactionEffect::Additive(
+                1.25 * level_multiplier(self.stats.get_stat(Level)),
+            )),
 
-        match reaction {
-            ElementalReaction::ForwardVaporize | ElementalReaction::ForwardMelt => {
-                ReactionEffect::Multiplicative(2.0)
-            }
-            ElementalReaction::ReverseVaporize | ElementalReaction::ReverseMelt => {
-                ReactionEffect::Multiplicative(1.5)
-            }
-            ElementalReaction::Quicken => ReactionEffect::Additive(todo!()),
-
-            _ => ReactionEffect::None,
+            _ => None,
         }
+        .map(|re| {
+            re.mult_internal(
+                1.0 + rxn_em_mult(rxn, self.stats.get_stat(ElementalMastery))
+                    + self.stats.get_stat(RxnDMGMult(rxn)),
+            )
+        })
     }
 
     fn dmg_mult(&self) -> f64 {
-        // TODO
-        1.0
+        self.conditions_met().into_iter().fold(1.0, |a, condition| {
+            a + self.stats.get_stat(DMGMult(condition))
+        })
     }
 
     fn def_mult(&self) -> f64 {
-        1.0
+        (self.stats.get_stat(Level) + 100.0)
+            / (self.stats.get_stat(Level) + self.target_stats.get_stat(Level) + 200.0)
     }
 
     fn res_mult(&self) -> f64 {
-        1.0
+        // This requires the enemy to have a proper stat list to grab resistances from
+        1.0 - self
+            .target_stats
+            .get_stat(ResMult(self.talent.elem_app().map(|x| x.element()).into()))
     }
 
     fn crit_mult(&self) -> f64 {
-        1.0
+        // TODO - various "crit modes"
+        1.0 + self.stats.get_stat(CritRate) * self.stats.get_stat(CritDmg)
     }
+}
+
+/// Calculate the em multiplier for a type of reaction with a certain amount of EM
+pub fn rxn_em_mult(rxn: ElementalReaction, em: f64) -> f64 {
+    match rxn {
+        ForwardMelt | ForwardVaporize | ReverseMelt | ReverseVaporize => amp_em_mult(em),
+        Aggravate | Spread => add_em_mult(em),
+        Crystallize => cry_em_dmg_absorb(em),
+        _ => trans_em_mult(em),
+    }
+}
+
+pub fn amp_em_mult(em: f64) -> f64 {
+    2.78 * em / (em + 1400.0)
+}
+
+pub fn trans_em_mult(em: f64) -> f64 {
+    16.0 * em / (em + 2000.0)
+}
+
+pub fn add_em_mult(em: f64) -> f64 {
+    5.0 * em / (em + 1200.0)
+}
+
+pub fn cry_em_dmg_absorb(em: f64) -> f64 {
+    4.44 * em / (em + 1400.0)
+}
+
+// todo
+pub fn level_multiplier(_level: f64) -> f64 {
+    1.0
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        character::{
-            stats::{self, Stat, Stats},
-            talent::{self, Talent},
-        },
-        element::ElementalApplication,
-    };
-
-    fn simple_stats() -> Stats {
-        Stats::from([
-            (stats::Type::Hp, 10000.0),
-            (stats::Type::Atk, 1000.0),
-            (stats::Type::Def, 500.0),
-        ])
-    }
-
-    #[test]
-    fn basic_calculate() {
-        let stats = simple_stats();
-        let talent = Talent::new(
-            talent::Type::NormalAttack(0),
-            None,
-            vec![Stat::new(stats::Type::Atk, 1.0)],
-        );
-        let enemy_config = EnemyConfig::default();
-        let mut calculator = DamageCalculator::new(&stats, &talent, &enemy_config);
-
-        assert_eq!(calculator.calculate(), 1000.0);
-    }
-
-    #[test]
-    fn calculate_with_amp_reaction() {
-        let stats = simple_stats();
-        let talent = Talent::new(
-            talent::Type::NormalAttack(1),
-            Some(ElementalApplication::new(
-                crate::element::Element::Pyro,
-                1.0,
-            )),
-            vec![Stat::new(stats::Type::Atk, 1.0)],
-        );
-        let enemy_config = EnemyConfig::new(
-            Aura {
-                typ: crate::AuraType::Hydro,
-                gauge: 1.0,
-                gauge_decay_rate: 0.0,
-            },
-            90,
-        );
-        let mut calculator = DamageCalculator::new(&stats, &talent, &enemy_config);
-
-        assert_eq!(calculator.calculate(), 1500.0);
-    }
-
-    #[test]
-    fn calculate_with_amp_reaction_and_dmg_bonus() {
-        let stats = Stats::from([
-            (stats::Type::Hp, 10000.0),
-            (stats::Type::Atk, 1000.0),
-            (stats::Type::Def, 500.0),
-            (stats::Type::DMGBonus(stats::DMGBonusType::Universal), 0.50),
-        ]);
-        let talent = Talent::new(
-            talent::Type::NormalAttack(0),
-            Some(ElementalApplication::new(
-                crate::element::Element::Pyro,
-                1.0,
-            )),
-            vec![Stat::new(stats::Type::Atk, 1.0)],
-        );
-        let enemy_config = EnemyConfig::new(
-            Aura {
-                typ: crate::AuraType::Hydro,
-                gauge: 1.0,
-                gauge_decay_rate: 0.0,
-            },
-            90,
-        );
-        let mut calculator = DamageCalculator::new(&stats, &talent, &enemy_config);
-
-        assert_eq!(calculator.calculate(), 2250.0);
-    }
-}
+mod tests;
