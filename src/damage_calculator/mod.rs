@@ -24,25 +24,6 @@ impl ReactionEffect {
     }
 }
 
-/// Status of the enemy that the damage is being calculated for.
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default)]
-pub struct EnemyConfig {
-    aura: Option<GaugedAura>,
-    level: usize,
-}
-impl EnemyConfig {
-    pub fn new(aura: GaugedAura, level: usize) -> Self {
-        Self {
-            aura: Some(aura),
-            level,
-        }
-    }
-    pub fn aura_type(&self) -> Option<Aura> {
-        self.aura.as_ref().map(|a| a.typ())
-    }
-}
-
 pub enum CritMode {
     NonCrit,
     AvgCrit,
