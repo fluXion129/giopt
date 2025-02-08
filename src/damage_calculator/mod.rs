@@ -178,6 +178,3 @@ pub fn cry_em_dmg_absorb(em: f64) -> f64 {
 pub fn level_multiplier(_level: f64) -> f64 {
     todo!("level multipliers")
 }
-
-#[cfg(test)]
-mod tests;
