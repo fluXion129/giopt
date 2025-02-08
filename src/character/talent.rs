@@ -37,7 +37,7 @@ impl Talent {
         self.elem_app.as_ref().map(|x| x.element()).into()
     }
 
-    /// Returns all conditions that this talent meets
+    /// Creates a vector of all conditions that this talent meets
     pub fn conditions_met(&self) -> Vec<Option<Condition>> {
         let mut result = vec![None, Some(Condition::Attribute(self.attribute()))];
         if let Some(category) = self.category() {

@@ -10,16 +10,15 @@ use crate::{
 };
 
 #[derive(Debug)]
-enum ReactionEffect {
+pub enum ReactionEffect {
     Additive(f64),
     Multiplicative(f64),
 }
 impl ReactionEffect {
-    /// Multiplies the effect of the reaction, preserving its type
-    fn mult_internal(&self, mult: f64) -> Self {
+    pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
         match *self {
-            Self::Additive(x) => Self::Additive(x * mult),
-            Self::Multiplicative(x) => Self::Multiplicative(x * mult),
+            Self::Additive(x) => Self::Additive(f(x)),
+            Self::Multiplicative(x) => Self::Multiplicative(f(x)),
         }
     }
 }
@@ -37,18 +36,20 @@ pub fn evaluate_damage_instance(
     target_aura: Option<&GaugedAura>,
     crit_mode: CritMode,
 ) -> f64 {
-    let mut result =
-        base_dmg(stats, talent) * stats.tal_base_dmg_mult(talent) + stats.tal_base_dmg_flat(talent);
+    let conds = talent.conditions_met();
+    let mut result = base_dmg(stats, talent)
+        * stats.sum_mults(conds.iter().map(|&x| BaseDMGMult(x)))
+        + stats.sum_mults(conds.iter().map(|&x| BaseDMGFlat(x)));
     match rxn_effect(target_aura.map(|x| x.typ()), talent.elem_app(), stats) {
         Some(ReactionEffect::Additive(val)) => result += val,
         Some(ReactionEffect::Multiplicative(val)) => result *= val,
         None => (),
     }
     result
-        * stats.tal_dmg_mult(talent)
-        * def_mult(stats.get_stat(Level), target_stats.get_stat(Level))
-        * res_mult(target_stats.get_stat(ResMult(talent.attribute())))
-        * crit_mult(stats.get_stat(CritRate), stats.get_stat(CritDmg), crit_mode)
+        * stats.sum_mults(conds.iter().map(|&x| DMGMult(x)))
+        * def_mult(stats.get(Level), target_stats.get(Level))
+        * res_mult(target_stats.get(ResMult(talent.attribute())))
+        * crit_mult(stats.get(CritRate), stats.get(CritDmg), crit_mode)
 }
 
 /// Calculates the base damage given the stats and talent
@@ -56,21 +57,21 @@ pub fn base_dmg(stats: &Stats, talent: &Talent) -> f64 {
     let result = talent
         .get_scalings()
         .iter()
-        .map(|s| stats.get_stat(s.typ()) * s.val())
+        .map(|s| stats.get(s.typ()) * s.val())
         .sum();
     println!("base dmg: {result}");
     result
 }
 
 /// Calculates the defense multiplier of the enemy
-fn def_mult(char_lvl: f64, enemy_lvl: f64) -> f64 {
+pub fn def_mult(char_lvl: f64, enemy_lvl: f64) -> f64 {
     let result = (char_lvl + 100.0) / (char_lvl + enemy_lvl + 200.0);
     println!("def mult: {result}");
     result
 }
 
 /// Calculates the resistance multiplier of the target
-fn res_mult(target_res: f64) -> f64 {
+pub fn res_mult(target_res: f64) -> f64 {
     let result = if target_res < 0.0 {
         1.0 - target_res / 2.0
     } else if target_res < 0.75 {
@@ -83,7 +84,7 @@ fn res_mult(target_res: f64) -> f64 {
 }
 
 /// Calculates the crit multiplier
-fn crit_mult(cr: f64, cd: f64, mode: CritMode) -> f64 {
+pub fn crit_mult(cr: f64, cd: f64, mode: CritMode) -> f64 {
     let result = match mode {
         CritMode::NonCrit => 1.0,
         CritMode::AvgCrit => 1.0 + cr * cd,
@@ -94,7 +95,7 @@ fn crit_mult(cr: f64, cd: f64, mode: CritMode) -> f64 {
 }
 
 /// Returns the reaction effect for the damage instance
-fn rxn_effect(
+pub fn rxn_effect(
     target_aura: Option<Aura>,
     elem_app: Option<&ElementalApplication>,
     stats: &Stats,
@@ -104,25 +105,23 @@ fn rxn_effect(
         ForwardVaporize | ForwardMelt => Some(ReactionEffect::Multiplicative(2.0)),
         ReverseVaporize | ReverseMelt => Some(ReactionEffect::Multiplicative(1.5)),
         Aggravate => Some(ReactionEffect::Additive(
-            1.15 * level_multiplier(stats.get_stat(Level)),
+            1.15 * level_multiplier(stats.get(Level)),
         )),
         Spread => Some(ReactionEffect::Additive(
-            1.25 * level_multiplier(stats.get_stat(Level)),
+            1.25 * level_multiplier(stats.get(Level)),
         )),
 
         _ => None,
     }
     .map(|re| {
-        re.mult_internal(
-            1.0 + rxn_em_mult(rxn, stats.get_stat(ElementalMastery))
-                + stats.get_stat(RxnDMGMult(rxn)),
-        )
+        re.map(|x| {
+            x * (1.0 + rxn_em_mult(rxn, stats.get(ElementalMastery)) + stats.get(RxnDMGMult(rxn)))
+        })
     });
     println!("reaction effect: {result:?}");
     result
 }
 
-/// Calculate the em multiplier for a type of reaction with a certain amount of EM
 pub fn rxn_em_mult(rxn: ElementalReaction, em: f64) -> f64 {
     match rxn {
         ForwardMelt | ForwardVaporize | ReverseMelt | ReverseVaporize => amp_em_mult(em),
