@@ -4,17 +4,47 @@ use crate::{
 };
 use std::collections::HashMap;
 
+use super::talent::Talent;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Stats {
     data: HashMap<Type, f64>,
 }
 
 impl Stats {
+    /// Gets the stat associated with the key. Stats that are not in the map are considered to be 0.0.
     pub fn get_stat(&self, key: Type) -> f64 {
         self.data.get(&key).unwrap_or(&0.0).to_owned()
     }
+    /// Adds a stat to the stats. If the stat is already present, the values will be added.
     pub fn add_stat(&mut self, stat: &Stat) {
-        self.data.insert(stat.typ(), stat.val());
+        *self.data.entry(stat.typ()).or_insert(0.0) += stat.val();
+    }
+
+    /// Aggregates the relevant dmg multipliers for a talent
+    pub fn tal_dmg_mult(&self, talent: &Talent) -> f64 {
+        talent
+            .conditions_met()
+            .into_iter()
+            .fold(1.0, |a, condition| {
+                a + self.get_stat(Type::DMGMult(condition))
+            })
+    }
+
+    /// Aggregates the relevant base dmg multipliers for a talent
+    pub fn tal_base_dmg_mult(&self, talent: &Talent) -> f64 {
+        talent
+            .conditions_met()
+            .into_iter()
+            .fold(1.0, |a, cond| a + self.get_stat(Type::BaseDMGMult(cond)))
+    }
+
+    /// Aggregates the relevant base dmg multipliers for a talent
+    pub fn tal_base_dmg_flat(&self, talent: &Talent) -> f64 {
+        talent
+            .conditions_met()
+            .into_iter()
+            .fold(1.0, |a, cond| a + self.get_stat(Type::BaseDMGFlat(cond)))
     }
 }
 
