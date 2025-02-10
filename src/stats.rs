@@ -5,11 +5,11 @@ use crate::{
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Stats {
+pub struct StatSheet {
     data: HashMap<Type, f64>,
 }
 
-impl Stats {
+impl StatSheet {
     /// Gets the stat associated with the key. Stats that are not in the map are considered to be 0.0.
     pub fn get(&self, key: Type) -> f64 {
         self.data.get(&key).unwrap_or(&0.0).to_owned()
@@ -38,7 +38,7 @@ impl Stats {
     }
 }
 
-impl<const N: usize> From<[(Type, f64); N]> for Stats {
+impl<const N: usize> From<[(Type, f64); N]> for StatSheet {
     fn from(arr: [(Type, f64); N]) -> Self {
         Self {
             data: HashMap::from(arr),

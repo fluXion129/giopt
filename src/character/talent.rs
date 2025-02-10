@@ -3,12 +3,21 @@ use crate::{
     element::ElementalApplication,
 };
 
-use super::stats::{Condition, Stat};
+use crate::stats::{Condition, Stat};
+
+/// A struct that store the talent data of a character.
+///
+/// Heavy TODO
+///
+/// After implemented -> Add character-specific talent sheets
+pub struct TalentSheet {
+    NormalAttacks: Vec<Talent>,
+}
 
 #[derive(Clone)]
 pub struct Talent {
     category: Option<Category>,
-    elem_app: Option<ElementalApplication>,
+    elem_app: Option<ElementalApplication>, // This will have to change as I implement ICD
     scalings: Vec<Stat>,
 }
 impl Talent {

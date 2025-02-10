@@ -1,12 +1,10 @@
 use crate::{
-    character::{
-        stats::{Stats, Type::*},
-        talent::Talent,
-    },
+    character::talent::Talent,
     element::{
         reaction::ElementalReaction::{self, *},
         Aura, ElementalApplication, GaugedAura,
     },
+    stats::{StatSheet, Type::*},
 };
 
 #[derive(Debug)]
@@ -30,9 +28,9 @@ pub enum CritMode {
 }
 
 pub fn evaluate_damage_instance(
-    stats: &Stats,
+    stats: &StatSheet,
     talent: &Talent,
-    target_stats: &Stats,
+    target_stats: &StatSheet,
     target_aura: Option<&GaugedAura>,
     crit_mode: CritMode,
 ) -> f64 {
@@ -53,7 +51,7 @@ pub fn evaluate_damage_instance(
 }
 
 /// Calculates the base damage given the stats and talent
-pub fn base_dmg(stats: &Stats, talent: &Talent) -> f64 {
+pub fn base_dmg(stats: &StatSheet, talent: &Talent) -> f64 {
     let result = talent
         .get_scalings()
         .iter()
@@ -98,7 +96,7 @@ pub fn crit_mult(cr: f64, cd: f64, mode: CritMode) -> f64 {
 pub fn rxn_effect(
     target_aura: Option<Aura>,
     elem_app: Option<&ElementalApplication>,
-    stats: &Stats,
+    stats: &StatSheet,
 ) -> Option<ReactionEffect> {
     let rxn = ElementalReaction::from_elements(target_aura?, elem_app?.element())?;
     let result = match rxn {

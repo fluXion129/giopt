@@ -1,7 +1,28 @@
-
 pub mod talent;
-pub mod stats;
+use talent::TalentSheet;
 
-pub struct Character {
-    // unfinished
+use crate::equipment::{artifact::Artifact, weapon::Weapon};
+use crate::Ascension;
+
+pub struct Character<'a> {
+    level: f64,
+    ascension: Ascension,
+    equipment: &'a EquipSet<'a>,
+    talents: &'static TalentSheet,
+    constellation: Constellation,
+}
+
+pub struct EquipSet<'a> {
+    weapon: &'a Weapon,
+    artifacts: [Option<&'a Artifact>; 5],
+}
+
+enum Constellation {
+    Zero,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
 }

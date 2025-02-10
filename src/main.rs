@@ -1,6 +1,6 @@
 use giopt::{
     character::{
-        stats::{Condition, Stat, Stats, Type::*},
+        stats::{Condition, Stat, StatSheet, Type::*},
         talent::Talent,
     },
     damage::Attribute::*,
@@ -10,7 +10,7 @@ use giopt::{
 
 fn main() {
     // Arlecchino Melt testing
-    let stats = Stats::from([
+    let stats = StatSheet::from([
         (Level, 90.0),
         (Hp, 20626.0),
         (Atk, 4514.2),
@@ -27,7 +27,7 @@ fn main() {
         vec![Stat::new(Atk, 9.00)],
     );
 
-    let enemy_stats = Stats::from([(Level, 103.0), (ResMult(Elemental(Pyro)), -0.5)]);
+    let enemy_stats = StatSheet::from([(Level, 103.0), (ResMult(Elemental(Pyro)), -0.5)]);
     let enemy_aura = Some(GaugedAura::new(Aura::Dendro, 1.0, 0.0));
 
     // 1 million calculatons takes around 20 seconds
