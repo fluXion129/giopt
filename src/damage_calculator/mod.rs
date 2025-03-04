@@ -30,6 +30,7 @@ pub enum CritMode {
 pub fn evaluate_damage_instance(
     stats: &StatSheet,
     talent: &Talent,
+    elem_app: Option<ElementalApplication>,
     target_stats: &StatSheet,
     target_aura: Option<&GaugedAura>,
     crit_mode: CritMode,
@@ -38,7 +39,7 @@ pub fn evaluate_damage_instance(
     let mut result = base_dmg(stats, talent)
         * stats.sum_mults(conds.iter().map(|&x| BaseDMGMult(x)))
         + stats.sum_mults(conds.iter().map(|&x| BaseDMGFlat(x)));
-    match rxn_effect(target_aura.map(|x| x.typ()), talent.elem_app(), stats) {
+    match rxn_effect(target_aura.map(|x| x.aura()), elem_app.as_ref(), stats) {
         Some(ReactionEffect::Additive(val)) => result += val,
         Some(ReactionEffect::Multiplicative(val)) => result *= val,
         None => (),
@@ -46,7 +47,7 @@ pub fn evaluate_damage_instance(
     result
         * stats.sum_mults(conds.iter().map(|&x| DMGMult(x)))
         * def_mult(stats.get(Level), target_stats.get(Level))
-        * res_mult(target_stats.get(ResMult(talent.attribute())))
+        * res_mult(target_stats.get(ResMult(elem_app.map(|x| x.element()).into())))
         * crit_mult(stats.get(CritRate), stats.get(CritDmg), crit_mode)
 }
 

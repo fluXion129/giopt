@@ -1,14 +1,10 @@
+pub mod calculator;
 pub mod character;
-
-pub mod damage_calculator;
-
 pub mod damage;
-
+pub mod damage_calculator;
 pub mod element;
-
-pub mod stats;
-
 pub mod equipment;
+pub mod stats;
 
 // Uncategorized genshin data types
 enum Ascension {

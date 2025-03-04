@@ -1,34 +1,62 @@
-use crate::{
-    damage::{Attribute, Category},
-    element::ElementalApplication,
-};
+use std::collections::HashMap;
+use std::ops::{Mul, MulAssign};
+use std::time::Duration;
+
+use crate::damage::{Attribute, Category};
 
 use crate::stats::{Condition, Stat};
 
+/// Determines the pattern of elemental applications
+pub struct ICD {
+    time: Duration,
+    hits: usize,
+}
+impl ICD {
+    pub const STANDARD: Self = Self {
+        time: Duration::new(2, 500000000),
+        hits: 3,
+    };
+}
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct ID {
+    typ: Option<Category>,
+    num: u8,
+}
+
 /// A struct that store the talent data of a character.
 ///
-/// Heavy TODO
+/// TODO
 ///
 /// After implemented -> Add character-specific talent sheets
 pub struct TalentSheet {
-    NormalAttacks: Vec<Talent>,
+    data: HashMap<ID, Talent>,
+}
+impl TalentSheet {
+    /// Gets the talent you're looking for. This does not include the level multiplier
+    pub fn get(&self, id: &ID) -> Option<&Talent> {
+        self.data.get(id)
+    }
 }
 
 #[derive(Clone)]
 pub struct Talent {
     category: Option<Category>,
-    elem_app: Option<ElementalApplication>, // This will have to change as I implement ICD
+    attribute: Option<Attribute>,
+    _icd: &'static ICD,
     scalings: Vec<Stat>,
 }
 impl Talent {
     pub fn new(
         category: Option<Category>,
-        elem_app: Option<ElementalApplication>,
+        attribute: Option<Attribute>,
+        _icd: &'static ICD,
         scalings: Vec<Stat>,
     ) -> Self {
         Self {
             category,
-            elem_app,
+            attribute,
+            _icd,
             scalings,
         }
     }
@@ -39,19 +67,34 @@ impl Talent {
     pub fn get_scalings(&self) -> &[Stat] {
         &self.scalings
     }
-    pub fn elem_app(&self) -> Option<&ElementalApplication> {
-        self.elem_app.as_ref()
-    }
-    pub fn attribute(&self) -> Attribute {
-        self.elem_app.as_ref().map(|x| x.element()).into()
-    }
 
     /// Creates a vector of all conditions that this talent meets
     pub fn conditions_met(&self) -> Vec<Option<Condition>> {
-        let mut result = vec![None, Some(Condition::Attribute(self.attribute()))];
-        if let Some(category) = self.category() {
-            result.push(Some(Condition::Category(category)));
+        [
+            self.attribute.map(|x| Condition::Attribute(x)),
+            self.category.map(|x| Condition::Category(x)),
+        ]
+        .into_iter()
+        .filter(|x| x.is_some())
+        .chain(None.into_iter())
+        .collect()
+    }
+}
+impl Mul<f64> for &Talent {
+    type Output = Talent;
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self::Output {
+            category: self.category,
+            attribute: self.attribute,
+            _icd: self._icd,
+            scalings: self.scalings.iter().map(|x| x * rhs).collect(),
         }
-        result
+    }
+}
+impl MulAssign<f64> for Talent {
+    fn mul_assign(&mut self, rhs: f64) {
+        for scaling in self.scalings.iter_mut() {
+            *scaling *= rhs;
+        }
     }
 }

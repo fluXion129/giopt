@@ -1,11 +1,12 @@
+use std::collections::HashMap;
+
 use giopt::{
-    character::{
-        stats::{Condition, Stat, StatSheet, Type::*},
-        talent::Talent,
-    },
-    damage::Attribute::*,
+    calculator::{Calculator, Operation, Rule, Rules},
+    character::talent::{Talent, ICD},
+    damage::Attribute::{self, *},
     damage_calculator::{evaluate_damage_instance, CritMode},
     element::{Aura, Element::*, ElementalApplication, GaugedAura},
+    stats::{Condition, Stat, StatSheet, Type::*},
 };
 
 fn main() {
@@ -23,26 +24,51 @@ fn main() {
     ]);
     let c2burst = Talent::new(
         None,
-        Some(ElementalApplication::new(Pyro, 1.0)),
+        Some(Attribute::Elemental(Pyro)),
+        &ICD::STANDARD,
         vec![Stat::new(Atk, 9.00)],
     );
 
     let enemy_stats = StatSheet::from([(Level, 103.0), (ResMult(Elemental(Pyro)), -0.5)]);
     let enemy_aura = Some(GaugedAura::new(Aura::Dendro, 1.0, 0.0));
+    let dmg_on_crit = evaluate_damage_instance(
+        &stats,
+        &c2burst,
+        Some(ElementalApplication::new(Pyro, 1.0)),
+        &enemy_stats,
+        enemy_aura.as_ref(),
+        CritMode::OnCrit,
+    );
 
     // 1 million calculatons takes around 20 seconds
     // for _ in 0..1000000 {
     //     calculator.calculate();
     // }
 
-    println!(
-        "damage on crit: {}",
-        evaluate_damage_instance(
-            &stats,
-            &c2burst,
-            &enemy_stats,
-            enemy_aura.as_ref(),
-            CritMode::OnCrit
-        )
+    // println!("damage on crit: {dmg_on_crit}");
+
+    // Calculator testing
+    let calcrules = Rules::new(HashMap::from([
+        (3, Rule::new(vec![0, 1, 2], Operation::Sum)),
+        (5, Rule::new(vec![3, 4], Operation::Prod)),
+    ]));
+    let mut calc = Calculator::new(
+        HashMap::from([(0, 1.0), (1, 4.0), (2, 5.0), (4, 2.0)]),
+        &calcrules,
     );
+    println!("{:?}", calc.get(&5));
+
+    calc.set(4, 9.0);
+    println!("{:?}", calc.get(&5));
+
+    calc.set(3, 2.0);
+    println!("{:?}", calc.get(&5));
+
+    calc.remove(&3);
+    println!("{:?}", calc.get(&5));
+
+    calc.remove(&1);
+    println!("{:?}", calc.get(&5));
+
+    println!("{:?}", calc.get(&6));
 }

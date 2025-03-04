@@ -1,8 +1,8 @@
-use crate::{
-    damage::{self, Attribute},
-    element::reaction::ElementalReaction,
+use crate::{damage, element::reaction::ElementalReaction};
+use std::{
+    collections::HashMap,
+    ops::{Mul, MulAssign},
 };
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StatSheet {
@@ -18,8 +18,8 @@ impl StatSheet {
     /// Sums all multipliers for the keys in the given iterator
     ///
     /// ```
-    /// use giopt::{character::stats::{Stats, Type::DMGMult, Condition}, damage::Category::*};
-    /// let stats = Stats::from([
+    /// use giopt::{stats::{StatSheet, Type::DMGMult, Condition}, damage::Category::*};
+    /// let stats = StatSheet::from([
     ///     (DMGMult(None), 0.25),
     ///     (DMGMult(Some(Condition::Category(NormalAttack))), 0.25),
     ///     (DMGMult(Some(Condition::Category(ChargedAttack))), 0.50)
@@ -63,6 +63,20 @@ impl Stat {
         self.val
     }
 }
+impl Mul<f64> for &Stat {
+    type Output = Stat;
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self::Output {
+            typ: self.typ,
+            val: self.val * rhs,
+        }
+    }
+}
+impl MulAssign<f64> for Stat {
+    fn mul_assign(&mut self, rhs: f64) {
+        self.val *= rhs;
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -89,7 +103,7 @@ pub enum Type {
     DMGMult(Option<Condition>),
 
     // You can only have resistance to attributes for some reason, not any general condition
-    ResMult(Attribute),
+    ResMult(damage::Attribute),
 
     BaseDMGMult(Option<Condition>),
     BaseDMGFlat(Option<Condition>),
@@ -109,4 +123,14 @@ pub enum Type {
 pub enum Condition {
     Attribute(damage::Attribute),
     Category(damage::Category),
+}
+impl From<damage::Attribute> for Condition {
+    fn from(value: damage::Attribute) -> Self {
+        Self::Attribute(value)
+    }
+}
+impl From<damage::Category> for Condition {
+    fn from(value: damage::Category) -> Self {
+        Self::Category(value)
+    }
 }

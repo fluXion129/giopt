@@ -31,15 +31,15 @@ pub enum ElementalReaction {
     ReverseMelt,
 }
 impl ElementalReaction {
-    pub fn is_amp_reaction(&self) -> bool {
-        match *self {
-            Self::ForwardVaporize
-            | Self::ReverseVaporize
-            | Self::ForwardMelt
-            | Self::ReverseMelt => true,
-            _ => false,
-        }
-    }
+    // pub fn is_amp_reaction(&self) -> bool {
+    //     match *self {
+    //         Self::ForwardVaporize
+    //         | Self::ReverseVaporize
+    //         | Self::ForwardMelt
+    //         | Self::ReverseMelt => true,
+    //         _ => false,
+    //     }
+    // }
 
     pub fn from_elements(aura: Aura, trigger: Element) -> Option<Self> {
         match (aura, trigger) {

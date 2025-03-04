@@ -40,7 +40,7 @@ impl GaugedAura {
             gauge_decay_rate,
         }
     }
-    pub fn typ(&self) -> Aura {
+    pub fn aura(&self) -> Aura {
         self.aura
     }
 }
