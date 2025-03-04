@@ -16,15 +16,19 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
         Self { data, rules }
     }
 
-    /// Core method of the calculator. Priorities: Value in Calc > Calculate Value from Rules > 0.0
+    /// Core method of the calculator. Currently implemented through recursion.
+    /// Tries to get the value of the key given, both through direct access and calculation.
+    ///
+    /// Methods of calculation, in order:
+    /// - Retrieve the value stored in the Calculator's data
+    /// - Calculate the value using the associated Rule
+    ///     - This recurses to get() the values of the keys needed for the calculation
+    /// - Default to 0.0
     pub fn get(&mut self, key: &K) -> f32 {
         self.data.get(key).cloned().unwrap_or_else(|| {
             self.rules
                 .get(key)
-                .map(|rule| {
-                    let vals: Vec<f32> = rule.keys().iter().map(|k| self.get(k)).collect();
-                    rule.eval(&vals)
-                })
+                .map(|rule| rule.eval(rule.keys().iter().map(|k| self.get(k))))
                 .unwrap_or(0.0)
         })
     }
@@ -33,6 +37,8 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
     /// that the effects of setting this value will be seen in upstream calculations.
     ///
     /// QUESTION - should children also be removed?
+    /// Leaving them in invites a certain amount of confusion, but removing them could
+    /// be annoying.
     pub fn set(&mut self, key: K, val: f32) {
         if self.data.insert(key.clone(), val).is_some() {
             self.remove_parents(key);
@@ -60,10 +66,6 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
         }
     }
 }
-
-// fn sum<'a, V: Default + Add<&'a V, Output = V>>(vals: &'a [V]) -> V {
-//     vals.iter().fold(V::default(), |a, v| a + v)
-// }
 
 #[cfg(test)]
 mod tests {

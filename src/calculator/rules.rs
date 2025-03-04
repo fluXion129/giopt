@@ -1,5 +1,12 @@
 use std::{collections::HashMap, hash::Hash};
 
+/// A tree of mappings between tags that describes the mathematical relations between them.
+///
+/// For instance:
+/// - 0: Sum\[1, 2]
+/// - 2: Prod\[3, 4]
+/// Would mean that tag 0 is equal to the sum of tags 1 and 2,
+/// and tag 2 is equal to the product of tags 3 and 4
 pub struct Rules<K: Clone + Eq + Hash> {
     rules: HashMap<K, Rule<K>>,
     parents: HashMap<K, K>,
@@ -35,8 +42,11 @@ impl<K: Clone> Rule<K> {
         &self.keys
     }
 
-    pub fn eval(&self, vals: &[f32]) -> f32 {
-        self.operation.eval(vals)
+    pub fn eval(&self, vals: impl Iterator<Item = f32>) -> f32 {
+        match self.operation {
+            Operation::Sum => vals.sum(),
+            Operation::Prod => vals.product(),
+        }
     }
 }
 
@@ -44,14 +54,4 @@ impl<K: Clone> Rule<K> {
 pub enum Operation {
     Sum,
     Prod,
-    MultSum,
-}
-impl Operation {
-    pub fn eval<'a>(&self, vals: &'a [f32]) -> f32 {
-        match self {
-            Self::Sum => vals.iter().fold(0.0, |a, v| a + v),
-            Self::Prod => vals.iter().fold(1.0, |a, v| a * v),
-            Self::MultSum => vals.iter().fold(1.0, |a, v| a + v),
-        }
-    }
 }

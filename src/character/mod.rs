@@ -1,3 +1,6 @@
+// TODO - Remove when actually using Characters
+#![allow(dead_code)]
+
 pub mod talent;
 use talent::TalentSheet;
 

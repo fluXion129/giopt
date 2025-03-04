@@ -1,3 +1,6 @@
+// TODO - Remove once completed
+#![allow(dead_code)]
+
 pub mod calculator;
 pub mod character;
 pub mod damage;
