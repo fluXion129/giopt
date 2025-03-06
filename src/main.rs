@@ -56,19 +56,27 @@ fn main() {
         HashMap::from([(0, 1.0), (1, 4.0), (2, 5.0), (4, 2.0)]),
         &calcrules,
     );
-    println!("{:?}", calc.get(&5));
+    calc.print_sheet_state();
+    println!("{:?}\n", calc.get(&5));
 
     calc.set(4, 9.0);
-    println!("{:?}", calc.get(&5));
+    calc.print_sheet_state();
+    println!("{:?}\n", calc.get(&5));
 
     calc.set(3, 2.0);
-    println!("{:?}", calc.get(&5));
+    calc.print_sheet_state();
+    println!("{:?}\n", calc.get(&5));
 
     calc.remove(&3);
-    println!("{:?}", calc.get(&5));
+    calc.print_sheet_state();
+    println!("{:?}\n", calc.get(&5));
 
+    calc.print_sheet_state();
     calc.remove(&1);
-    println!("{:?}", calc.get(&5));
+    calc.print_sheet_state();
+    println!("{:?}\n", calc.get(&5));
 
     println!("{:?}", calc.get(&6));
+
+    calc.print_sheet_state();
 }

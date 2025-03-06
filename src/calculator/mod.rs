@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 pub use rules::{Operation, Rule, Rules};
 mod rules;
@@ -11,7 +11,7 @@ where
     rules: &'a Rules<K>,
 }
 
-impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
+impl<'a, K: Clone + Eq + Hash + Debug> Calculator<'a, K> {
     pub fn new(data: HashMap<K, f32>, rules: &'a Rules<K>) -> Self {
         Self { data, rules }
     }
@@ -25,12 +25,16 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
     ///     - This recurses to get() the values of the keys needed for the calculation
     /// - Default to 0.0
     pub fn get(&mut self, key: &K) -> f32 {
-        self.data.get(key).cloned().unwrap_or_else(|| {
-            self.rules
-                .get(key)
-                .map(|rule| rule.eval(rule.keys().iter().map(|k| self.get(k))))
-                .unwrap_or(0.0)
-        })
+        if let Some(val) = self.data.get(key) {
+            return val.clone();
+        }
+        let val = self
+            .rules
+            .get(key)
+            .map(|rule| rule.eval(rule.keys().iter().map(|k| self.get(k))))
+            .unwrap_or(0.0);
+        self.data.insert(key.clone(), val);
+        val
     }
 
     /// Sets the value in the calculator, and removes the values for the parents so
@@ -45,6 +49,24 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
         }
     }
 
+    /// Removes the value in the calculator, and removes the values for the parents
+    /// to trigger a recalculation of the upstream keys.
+    pub fn remove(&mut self, key: &K) -> Option<f32> {
+        self.remove_parents(key.clone());
+        self.data.remove(key)
+    }
+
+    /// Removes the parents of the key passed in until arriving at an unset value.
+    /// Will not remove the key itself.
+    ///
+    /// Calling this effectively results in a recalculation now including this key.
+    fn remove_parents(&mut self, mut key: K) -> Option<()> {
+        loop {
+            key = self.rules.get_parent(&key)?.clone();
+            self.data.remove(&key)?;
+        }
+    }
+
     /// Sets the value in the calculator without removing parents. This will mean that if
     /// parents have already been calculated, their values will be used instead of recalculating
     /// from the value that you place using this method. If there was a previous value, it will be
@@ -53,37 +75,18 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
         self.data.insert(key, val)
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<f32> {
+    /// Delete the value in the calculator, without removing parents. This will mean that if parents
+    /// have already been calculated, their values will be used instead of recalculating from the value
+    /// that you deleted using this method. If there was a previous value, it will be returned to you.
+    pub fn delete(&mut self, key: &K) -> Option<f32> {
         self.data.remove(key)
     }
 
-    fn remove_parents(&mut self, mut key: K) -> Option<()> {
-        loop {
-            key = self.rules.get_parent(&key)?.clone();
-            if self.data.remove(&key).is_some() {
-                break Some(());
-            }
-        }
+    /// Debug prints the sheets current data
+    pub fn print_sheet_state(&self) {
+        println!("{:?}", self.data);
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use crate::calculator::{Rule, Rules};
-
-    use super::{Calculator, Operation};
-
-    #[test]
-    fn basic_calculate() {
-        let calcrules = Rules::new(HashMap::from([(2, Rule::new(vec![0, 1], Operation::Sum))]));
-        let mut calc: Calculator<usize> = Calculator {
-            data: HashMap::from([(0, 1.0), (1, 2.0)]),
-            rules: &calcrules,
-        };
-        assert_eq!(calc.get(&0), 1.0);
-        assert_eq!(calc.get(&1), 2.0);
-        assert_eq!(calc.get(&2), 3.0);
-    }
-}
+mod tests;
