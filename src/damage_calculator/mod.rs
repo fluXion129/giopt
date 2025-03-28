@@ -47,7 +47,7 @@ pub fn evaluate_damage_instance(
     result
         * stats.sum_mults(conds.iter().map(|&x| DMGMult(x)))
         * def_mult(stats.get(Level), target_stats.get(Level))
-        * res_mult(target_stats.get(ResMult(elem_app.map(|x| x.element()).into())))
+        * res_mult(target_stats.get(AttributeRES(elem_app.map(|x| x.element()).into())))
         * crit_mult(stats.get(CritRate), stats.get(CritDmg), crit_mode)
 }
 

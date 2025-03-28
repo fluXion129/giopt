@@ -1,3 +1,5 @@
+/// Note for calculator "mux": indexing starts at 1 and is in order
+/// that is written down here (order of nation's release)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Element {
     Anemo,
@@ -7,6 +9,20 @@ pub enum Element {
     Hydro,
     Pyro,
     Cryo,
+}
+impl Element {
+    /// Return the index used by the calculator for each element.
+    pub fn calcindex(&self) -> f32 {
+        match *self {
+            Self::Anemo => 0.0,
+            Self::Geo => 1.0,
+            Self::Electro => 2.0,
+            Self::Dendro => 3.0,
+            Self::Hydro => 4.0,
+            Self::Pyro => 5.0,
+            Self::Cryo => 6.0,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

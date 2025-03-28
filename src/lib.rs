@@ -2,6 +2,8 @@
 #![allow(dead_code)]
 
 pub mod calculator;
+pub mod gi_calculator;
+pub use crate::gi_calculator::gi_rules::{B, GCK, GI_RULES, L, S};
 pub mod character;
 pub mod damage;
 pub mod damage_calculator;

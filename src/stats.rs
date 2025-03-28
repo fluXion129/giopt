@@ -82,12 +82,15 @@ impl MulAssign<f64> for Stat {
 pub enum Type {
     Level,
 
-    Hp,
+    MaxHP,
     Atk,
     Def,
 
     ElementalMastery,
 
+    // Conditional Crit Stats exist. It's actually possible
+    // that all stats can be conditional... Not sure what to
+    // do with that.
     CritRate,
     CritDmg,
 
@@ -103,7 +106,7 @@ pub enum Type {
     DMGMult(Option<Condition>),
 
     // You can only have resistance to attributes for some reason, not any general condition
-    ResMult(damage::Attribute),
+    AttributeRES(damage::Attribute),
 
     BaseDMGMult(Option<Condition>),
     BaseDMGFlat(Option<Condition>),
