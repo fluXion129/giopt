@@ -17,6 +17,11 @@ impl From<Option<Element>> for Attribute {
         }
     }
 }
+impl From<Element> for Attribute {
+    fn from(value: Element) -> Self {
+        Self::Elemental(value)
+    }
+}
 impl Attribute {
     pub fn calcindex(&self) -> f32 {
         match *self {

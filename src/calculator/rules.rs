@@ -60,13 +60,15 @@ pub fn product<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &
 /// Mux selector node evaluator. The first node determines the index of the node to pick within the keys
 /// excluding itself. If it contains an index that is not a valid option, it will panic.
 pub fn mux<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
-    let index = calc.get(keys.get(0).expect("Mux Node will have index node"));
+    let idxk = keys.get(0).expect("Mux Node will have index node");
+    let index = calc.get(idxk) + 1.0;
     let key = keys
-        .get(index as usize + 1)
+        .get(index as usize)
         .expect("Mux Node Index should correspond to a valid Node.");
     calc.get(key)
 }
 
-pub fn sum_mult_bonus<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
-    keys.iter().map(|k| calc.get(k)).fold(1.0, |a, x| a + x)
+/// Same as sum node, but adds one to it.
+pub fn sum_plus_one<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
+    keys.iter().map(|k| calc.get(k)).sum::<f32>() + 1.0
 }

@@ -2,7 +2,7 @@ use std::{collections::HashMap, hash::Hash, sync::LazyLock};
 
 use crate::{
     calculator::{
-        rules::{mux, product, sum, sum_mult_bonus, Rule, Rules},
+        rules::{mux, product, sum, sum_plus_one, Rule, Rules},
         Calculator,
     },
     damage::{Attribute, Category},
@@ -15,8 +15,16 @@ use crate::{
 pub enum GCK {
     B(B),
     L(L),
+    // I really want to get rid of these - not sure best way to do so though.
     One,
-    Zero
+    Zero,
+}
+
+// This is for convenience of inputting character stats.
+impl From<StatType> for GCK {
+    fn from(value: StatType) -> Self {
+        Self::L(L::Stat(value))
+    }
 }
 
 /// Branch Genshin Calc Keys - These are typically calculated from the Leaf Keys,
@@ -62,6 +70,7 @@ pub enum B {
 /// Have no rule associated with them - the keys you will need to put values for.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum L {
+    Zero,
     Attribute,
     Category,
 
@@ -75,6 +84,7 @@ pub enum L {
     TargetLevel,
     // This needs to be positive!
     TargetDEFReduct,
+    TargetAttributeRES(Attribute),
     // This needs to be negative!
     TargetAttributeRESReduct(Attribute),
 
@@ -122,7 +132,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
             GCK::B(B::BaseDMGMult)
         ];
         // TODO - ADD Conditional BaseDMG modifiers
-        GCK::B(B::BaseDMGMult) => sum_mult_bonus[
+        GCK::B(B::BaseDMGMult) => sum_plus_one[
             GCK::L(L::Stat(StatType::BaseDMGMult(None)))
         ];
         GCK::B(B::BaseDMG) => sum[
@@ -149,7 +159,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
 
         // Evaluating DMGBonusMult
-        GCK::B(B::DMGBonusMult) => sum_mult_bonus[
+        GCK::B(B::DMGBonusMult) => sum_plus_one[
             GCK::L(L::Stat(StatType::DMGMult(None))),
             GCK::B(B::AttributeDMGBonusMult),
             GCK::B(B::CategoryDMGBonusMult),
@@ -194,14 +204,14 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
         GCK::B(B::TargetAttributeRES) => mux[
             GCK::L(L::Attribute),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Physical))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Anemo)))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Geo)))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Electro)))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Dendro)))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Hydro)))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Pyro)))),
-            GCK::L(L::Stat(StatType::AttributeRES(Attribute::Elemental(Element::Cryo))))
+            GCK::L(L::TargetAttributeRES(Attribute::Physical)),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Anemo))),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Geo))),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Electro))),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Dendro))),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Hydro))),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Pyro))),
+            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Cryo)))
         ];
         GCK::B(B::TargetAttributeRESReduct) => mux[
             GCK::L(L::Attribute),
@@ -219,6 +229,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         GCK::B(B::AmpRxnMult) => mux[
             GCK::L(L::AmpRxnType),
             GCK::One,
+            GCK::B(B::PotentialAmpRxnMult),
             GCK::B(B::PotentialAmpRxnMult)
         ];
 
@@ -226,7 +237,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
             GCK::L(L::BaseAmpRxnMult),
             GCK::B(B::AmpRxnTotalBonusMult)
         ];
-        GCK::B(B::AmpRxnTotalBonusMult) => sum[
+        GCK::B(B::AmpRxnTotalBonusMult) => sum_plus_one[
             GCK::B(B::AmpRxnEMMult),
             GCK::B(B::AmpRxnBonusMult)
         ];
@@ -235,7 +246,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
         GCK::B(B::AmpRxnBonusMult) => mux[
             GCK::L(L::AmpRxnType),
-            GCK::Zero,
+            GCK::L(L::Zero),
             GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardVaporize))),
             GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardMelt)))
         ];
@@ -251,6 +262,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
         GCK::B(B::TotalCritDMG) => sum [
             GCK::L(L::Stat(StatType::CritDmg))
+            // TODO - ADD Conditional Crit Stats
         ]
     )
 });
@@ -274,7 +286,9 @@ pub fn def_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
         keys.get(3)
             .expect("def_mult nodes must have DEFIgnore fourth"),
     );
-    (c_level + 100.0) / (def_reduct * def_ignore * (e_level + 100.0) + (c_level + 100.0))
+    (c_level + 100.0)
+        / ((1.0 / (1.0 + def_reduct)) * (1.0 / (1.0 + def_ignore)) * (e_level + 100.0)
+            + (c_level + 100.0))
 }
 
 pub fn res_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {

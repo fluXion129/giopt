@@ -1,4 +1,7 @@
-use crate::{damage, element::reaction::ElementalReaction};
+use crate::{
+    damage,
+    element::{reaction::ElementalReaction, Element},
+};
 use std::{
     collections::HashMap,
     ops::{Mul, MulAssign},
@@ -130,6 +133,11 @@ pub enum Condition {
 impl From<damage::Attribute> for Condition {
     fn from(value: damage::Attribute) -> Self {
         Self::Attribute(value)
+    }
+}
+impl From<Element> for Condition {
+    fn from(value: Element) -> Self {
+        Self::Attribute(damage::Attribute::Elemental(value))
     }
 }
 impl From<damage::Category> for Condition {

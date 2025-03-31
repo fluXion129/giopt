@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use giopt::{
     calculator::Calculator,
     damage::{Attribute, Category},
-    element::Element,
+    element::{reaction::ElementalReaction::*, Element::*},
     stats::Type::*,
     B, GCK, GI_RULES, L, S,
 };
@@ -47,100 +47,32 @@ fn main() {
 
     // println!("damage on crit: {dmg_on_crit}");
 
-    // Pre-GI Rules New Calc Testing
-    // #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-    // enum Keys {
-    //     One,
-    //     Attribute,
-    //     DamageInstanceOutput,
-    //     TotalAtk,
-    //     DmgBMult,
-    //     DmgB,
-    //     AttributeDmgB,
-    //     FireDmgB,
-    //     IceDmgB,
-    //     CritMult,
-    //     CritAddMult,
-    //     CritRate,
-    //     TotalCritDmg,
-    //     CritDmg,
-    //     AttributeCritDmg,
-    //     FireCritDmg,
-    //     IceCritDmg,
-    // }
-
-    // // Calculator testing
-    // let calcrules = Rules::new(HashMap::from([
-    //     (
-    //         Keys::DamageInstanceOutput,
-    //         Rule::new(
-    //             &product,
-    //             vec![Keys::TotalAtk, Keys::DmgBMult, Keys::CritMult],
-    //         ),
-    //     ),
-    //     (
-    //         Keys::DmgBMult,
-    //         Rule::new(&sum, vec![Keys::One, Keys::DmgB, Keys::AttributeDmgB]),
-    //     ),
-    //     (
-    //         Keys::AttributeDmgB,
-    //         Rule::new(&mux, vec![Keys::Attribute, Keys::FireDmgB, Keys::IceDmgB]),
-    //     ),
-    //     (
-    //         Keys::CritMult,
-    //         Rule::new(&sum, vec![Keys::One, Keys::CritAddMult]),
-    //     ),
-    //     (
-    //         Keys::CritAddMult,
-    //         Rule::new(&product, vec![Keys::CritRate, Keys::TotalCritDmg]),
-    //     ),
-    //     (
-    //         Keys::TotalCritDmg,
-    //         Rule::new(&sum, vec![Keys::CritDmg, Keys::AttributeCritDmg]),
-    //     ),
-    //     (
-    //         Keys::AttributeCritDmg,
-    //         Rule::new(
-    //             &mux,
-    //             vec![Keys::Attribute, Keys::FireCritDmg, Keys::IceCritDmg],
-    //         ),
-    //     ),
-    // ]));
-    // let mut calc = Calculator::from_components(
-    //     HashMap::from([
-    //         (Keys::One, 1.0),
-    //         (Keys::Attribute, 2.0),
-    //         (Keys::TotalAtk, 100.0),
-    //         (Keys::DmgB, 0.5),
-    //         (Keys::FireDmgB, 0.5),
-    //         (Keys::CritRate, 0.5),
-    //         (Keys::CritDmg, 1.0),
-    //         (Keys::IceCritDmg, 1.0),
-    //     ]),
-    //     &calcrules,
-    // );
-    // calc.get(&Keys::DamageInstanceOutput);
-    // calc.print_sheet_state();
-
+    // You have to create an instance of the GI_RULES so that the LazyLock gets evaluated.
+    // Actually I'm not quite sure about this, the type is still LazyLock<Rules<GCK>>
     let rules = GI_RULES;
+
     // GI_RULES testing
     let mut calc = Calculator::from_components(
         HashMap::from([
             (GCK::One, 1.0),
-            (GCK::L(L::Stat(Level)), 90.0),
-            (GCK::L(L::TargetLevel), 90.0),
-            (GCK::L(L::Scaling(S::Atk)), 1.0),
-            (
-                GCK::L(L::Attribute),
-                Attribute::Elemental(Element::Pyro).calcindex(),
-            ),
+            (GCK::L(L::TargetLevel), 103.0),
+            (GCK::L(L::TargetAttributeRES(Pyro.into())), 0.1),
+            (GCK::L(L::TargetAttributeRESReduct(Pyro.into())), -0.6),
+            (GCK::L(L::Scaling(S::Atk)), 9.0),
+            (GCK::L(L::Attribute), Attribute::from(Pyro).calcindex()),
             (GCK::L(L::Category), Category::NormalAttack.calcindex()),
-            (GCK::L(L::BaseAmpRxnMult), 1.0),
-            (GCK::L(L::AmpRxnType), 0.0),
-
-            (GCK::L(L::Stat(Atk)), 100.0),
-            (GCK::L(L::Stat(MaxHP)), 1000.0),
-            (GCK::L(L::Stat(DMGMult(None))), 0.5)
+            (GCK::L(L::BaseAmpRxnMult), 2.0),
+            (GCK::L(L::AmpRxnType), ForwardMelt.amp_rxn_type_calcindex()),
+            (Level.into(), 90.0),
+            (MaxHP.into(), 20626.0),
+            (Atk.into(), 4514.2),
+            (Def.into(), 765.0),
+            (ElementalMastery.into(), 380.0),
+            (CritRate.into(), 0.772),
+            (CritDmg.into(), 1.918),
+            (DMGMult(None).into(), 0.18),
+            (DMGMult(Some(Pyro.into())).into(), 1.416),
+            (DMGMult(Some(Cryo.into())).into(), 0.40),
         ]),
         &rules,
     );
@@ -153,22 +85,19 @@ fn main() {
 
     calc_print!(
         GCK::B(B::DamageInstanceOutput),
-
         GCK::B(B::BaseDMGFinal),
         // GCK::B(B::BaseDMGPostMult),
         // GCK::B(B::BaseDMG),
         // GCK::B(B::BaseDMGMult),
-
         GCK::B(B::DMGBonusMult),
-
         GCK::B(B::TargetDEFMult),
-
+        // GCK::L(L::Stat(Level)),
+        // GCK::L(L::TargetLevel),
+        // GCK::L(L::TargetDEFReduct),
+        // GCK::B(B::TotalDEFIgnore),
         GCK::B(B::TargetRESMult),
-
-        GCK::B(B::AmpRxnMult)
+        GCK::B(B::AmpRxnMult),
+        // GCK::B(B::AmpRxnTotalBonusMult),
+        GCK::B(B::CritMult)
     );
-
-    // println!("3: {}", calc.get(&3));
-    // println!("5: {}", calc.get(&5));
-    // println!("6: {}", calc.get(&6));
 }
