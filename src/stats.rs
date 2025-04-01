@@ -9,12 +9,12 @@ use std::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StatSheet {
-    data: HashMap<Type, f64>,
+    data: HashMap<Type, f32>,
 }
 
 impl StatSheet {
     /// Gets the stat associated with the key. Stats that are not in the map are considered to be 0.0.
-    pub fn get(&self, key: Type) -> f64 {
+    pub fn get(&self, key: Type) -> f32 {
         self.data.get(&key).unwrap_or(&0.0).to_owned()
     }
 
@@ -31,7 +31,7 @@ impl StatSheet {
     ///
     /// assert_eq!(stats.sum_mults(keys.into_iter()), 1.5);
     /// ```
-    pub fn sum_mults(&self, keys: impl Iterator<Item = Type>) -> f64 {
+    pub fn sum_mults(&self, keys: impl Iterator<Item = Type>) -> f32 {
         keys.fold(1.0, |a, x| a + self.get(x))
     }
 
@@ -39,10 +39,14 @@ impl StatSheet {
     pub fn add_stat(&mut self, stat: &Stat) {
         *self.data.entry(stat.typ()).or_insert(0.0) += stat.val();
     }
+
+    pub fn data(&self) -> &HashMap<Type, f32> {
+        &self.data
+    }
 }
 
-impl<const N: usize> From<[(Type, f64); N]> for StatSheet {
-    fn from(arr: [(Type, f64); N]) -> Self {
+impl<const N: usize> From<[(Type, f32); N]> for StatSheet {
+    fn from(arr: [(Type, f32); N]) -> Self {
         Self {
             data: HashMap::from(arr),
         }
@@ -52,31 +56,31 @@ impl<const N: usize> From<[(Type, f64); N]> for StatSheet {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Stat {
     typ: Type,
-    val: f64,
+    val: f32,
 }
 impl Stat {
-    pub fn new(typ: Type, val: f64) -> Self {
+    pub fn new(typ: Type, val: f32) -> Self {
         Self { typ, val }
     }
 
     pub fn typ(&self) -> Type {
         self.typ
     }
-    pub fn val(&self) -> f64 {
+    pub fn val(&self) -> f32 {
         self.val
     }
 }
-impl Mul<f64> for &Stat {
+impl Mul<f32> for &Stat {
     type Output = Stat;
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Self::Output {
             typ: self.typ,
             val: self.val * rhs,
         }
     }
 }
-impl MulAssign<f64> for Stat {
-    fn mul_assign(&mut self, rhs: f64) {
+impl MulAssign<f32> for Stat {
+    fn mul_assign(&mut self, rhs: f32) {
         self.val *= rhs;
     }
 }

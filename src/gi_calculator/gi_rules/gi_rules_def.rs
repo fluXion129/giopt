@@ -1,8 +1,8 @@
-use std::{collections::HashMap, hash::Hash, sync::LazyLock};
+use std::{collections::HashMap, sync::LazyLock};
 
 use crate::{
     calculator::{
-        rules::{mux, product, sum, sum_plus_one, Rule, Rules},
+        rules::{mux, mux0, mux1, neg, product, sum, sum_plus_one, Rule, Rules},
         Calculator,
     },
     damage::{Attribute, Category},
@@ -10,94 +10,64 @@ use crate::{
     stats::{Condition, Type as StatType},
 };
 
-/// Genshin Calc Keys
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum GCK {
-    B(B),
-    L(L),
-    // I really want to get rid of these - not sure best way to do so though.
-    One,
-    Zero,
+use super::{B, GCK, L, S};
+
+// Specialized calculator node evaluators
+
+pub fn def_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
+    let c_level = calc.get(
+        keys.first()
+            .expect("def_mult nodes must have character level first"),
+    );
+    let e_level = calc.get(
+        keys.get(1)
+            .expect("def_mult nodes must have enemy level second"),
+    );
+    let def_reduct = calc.get(
+        keys.get(2)
+            .expect("def_mult nodes must have DEFReduct third"),
+    );
+    let def_ignore = calc.get(
+        keys.get(3)
+            .expect("def_mult nodes must have DEFIgnore fourth"),
+    );
+    (c_level + 100.0)
+        / ((1.0 / (1.0 + def_reduct)) * (1.0 / (1.0 + def_ignore)) * (e_level + 100.0)
+            + (c_level + 100.0))
 }
 
-// This is for convenience of inputting character stats.
-impl From<StatType> for GCK {
-    fn from(value: StatType) -> Self {
-        Self::L(L::Stat(value))
+pub fn res_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
+    let res = calc.get(
+        keys.first()
+            .expect("res_mult nodes must have RESFinal as first"),
+    );
+    if res < 0.0 {
+        1.0 - (res / 2.0)
+    } else if res < 0.75 {
+        1.0 - res
+    } else {
+        1.0 / (4.0 * res + 1.0)
     }
 }
 
-/// Branch Genshin Calc Keys - These are typically calculated from the Leaf Keys,
-/// but if you want to override the functionality of the calculator, it can be
-/// useful to manipulate these.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum B {
-    DamageInstanceOutput,
-
-    BaseDMGFinal,
-    BaseDMGPostMult,
-    BaseDMGAdd,
-    BaseDMGMult,
-    BaseDMG,
-    EvalScaling(S),
-
-    DMGBonusMult,
-    AttributeDMGBonusMult,
-    CategoryDMGBonusMult,
-
-    TargetDEFMult,
-    TotalDEFIgnore,
-
-    TargetRESMult,
-    TargetRESFinal,
-    TargetBaseRES,
-    TargetAttributeRES,
-    TargetAttributeRESReduct,
-
-    AmpRxnMult,
-    PotentialAmpRxnMult,
-    AmpRxnTotalBonusMult,
-    AmpRxnEMMult,
-    AmpRxnBonusMult,
-
-    CritMult,
-    TotalCritRate,
-    TotalCritDMG,
-    AttributeCritDMG,
+pub fn amp_rxn_em_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
+    let em = calc.get(
+        keys.first()
+            .expect("amp_rxn_em_mult nodes must have EM first"),
+    );
+    2.78 * em / (em + 1400.0)
 }
 
-/// Leaf Genshin Calc Keys
-/// Have no rule associated with them - the keys you will need to put values for.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum L {
-    Zero,
-    Attribute,
-    Category,
-
-    Scaling(S),
-    BaseDMGAdd,
-
-    Stat(StatType),
-
-    TargetDMGBonusMult,
-
-    TargetLevel,
-    // This needs to be positive!
-    TargetDEFReduct,
-    TargetAttributeRES(Attribute),
-    // This needs to be negative!
-    TargetAttributeRESReduct(Attribute),
-
-    BaseAmpRxnMult,
-    AmpRxnType,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum S {
-    Atk,
-    Def,
-    MaxHP,
-    EM,
+pub fn crit_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
+    let cr = calc.get(
+        keys.first()
+            .expect("crit_mult nodes must have TotalCritRate first"),
+    );
+    let cdmg = calc.get(
+        keys.get(1)
+            .expect("crit_mult nodes must have TotalCritDMG first"),
+    );
+    1.0 + cr * cdmg
 }
 
 macro_rules! rule_gen {
@@ -109,6 +79,10 @@ macro_rules! rule_gen {
         ]))
     };
 }
+
+// NOTE Clippy says that const items should not be interior mutable. Not quite sure what that means
+// to be honest, and I think that I should probably do some more research on what LazyLock is actually
+// doing here.
 
 pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
     rule_gen!(
@@ -200,7 +174,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
         GCK::B(B::TargetRESFinal) => sum[
             GCK::B(B::TargetAttributeRES),
-            GCK::B(B::TargetAttributeRESReduct)
+            GCK::B(B::TargetAttributeRESReductNeg)
         ];
         GCK::B(B::TargetAttributeRES) => mux[
             GCK::L(L::Attribute),
@@ -212,6 +186,9 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
             GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Hydro))),
             GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Pyro))),
             GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Cryo)))
+        ];
+        GCK::B(B::TargetAttributeRESReductNeg) => neg[
+            GCK::B(B::TargetAttributeRESReduct)
         ];
         GCK::B(B::TargetAttributeRESReduct) => mux[
             GCK::L(L::Attribute),
@@ -226,9 +203,8 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
 
         // Evaluating AmpRxnMult
-        GCK::B(B::AmpRxnMult) => mux[
+        GCK::B(B::AmpRxnMult) => mux1[
             GCK::L(L::AmpRxnType),
-            GCK::One,
             GCK::B(B::PotentialAmpRxnMult),
             GCK::B(B::PotentialAmpRxnMult)
         ];
@@ -244,9 +220,8 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         GCK::B(B::AmpRxnEMMult) => amp_rxn_em_mult[
             GCK::L(L::Stat(StatType::ElementalMastery))
         ];
-        GCK::B(B::AmpRxnBonusMult) => mux[
+        GCK::B(B::AmpRxnBonusMult) => mux0[
             GCK::L(L::AmpRxnType),
-            GCK::L(L::Zero),
             GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardVaporize))),
             GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardMelt)))
         ];
@@ -266,61 +241,3 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ]
     )
 });
-
-// Specialized calculator node evaluators
-
-pub fn def_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
-    let c_level = calc.get(
-        keys.get(0)
-            .expect("def_mult nodes must have character level first"),
-    );
-    let e_level = calc.get(
-        keys.get(1)
-            .expect("def_mult nodes must have enemy level second"),
-    );
-    let def_reduct = calc.get(
-        keys.get(2)
-            .expect("def_mult nodes must have DEFReduct third"),
-    );
-    let def_ignore = calc.get(
-        keys.get(3)
-            .expect("def_mult nodes must have DEFIgnore fourth"),
-    );
-    (c_level + 100.0)
-        / ((1.0 / (1.0 + def_reduct)) * (1.0 / (1.0 + def_ignore)) * (e_level + 100.0)
-            + (c_level + 100.0))
-}
-
-pub fn res_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
-    let res = calc.get(
-        keys.get(0)
-            .expect("res_mult nodes must have RESFinal as first"),
-    );
-    if res < 0.0 {
-        1.0 - (res / 2.0)
-    } else if res < 0.75 {
-        1.0 - res
-    } else {
-        1.0 / (4.0 * res + 1.0)
-    }
-}
-
-pub fn amp_rxn_em_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
-    let em = calc.get(
-        keys.get(0)
-            .expect("amp_rxn_em_mult nodes must have EM first"),
-    );
-    2.78 * em / (em + 1400.0)
-}
-
-pub fn crit_mult(calc: &mut Calculator<GCK>, keys: &[GCK]) -> f32 {
-    let cr = calc.get(
-        keys.get(0)
-            .expect("crit_mult nodes must have TotalCritRate first"),
-    );
-    let cdmg = calc.get(
-        keys.get(1)
-            .expect("crit_mult nodes must have TotalCritDMG first"),
-    );
-    1.0 + cr * cdmg
-}

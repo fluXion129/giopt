@@ -6,6 +6,7 @@ use std::{collections::HashMap, hash::Hash};
 /// For instance:
 /// - 0: Sum\[1, 2]
 /// - 2: Prod\[3, 4]
+///
 /// Would mean that tag 0 is equal to the sum of tags 1 and 2,
 /// and tag 2 is equal to the product of tags 3 and 4
 pub struct Rules<K: Clone + Eq + Hash + 'static> {
@@ -60,7 +61,7 @@ pub fn product<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &
 /// Mux selector node evaluator. The first node determines the index of the node to pick within the keys
 /// excluding itself. If it contains an index that is not a valid option, it will panic.
 pub fn mux<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
-    let idxk = keys.get(0).expect("Mux Node will have index node");
+    let idxk = keys.first().expect("Mux Node will have index node");
     let index = calc.get(idxk) + 1.0;
     let key = keys
         .get(index as usize)
@@ -68,7 +69,31 @@ pub fn mux<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K])
     calc.get(key)
 }
 
+/// Mux selector, except defaults to 1 instead of panic.
+pub fn mux1<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
+    let idxk = keys.first().expect("Mux Node will have index node");
+    let index = calc.get(idxk) + 1.0;
+    let key = keys.get(index as usize);
+    key.map(|x| calc.get(x)).unwrap_or(1.0)
+}
+
+/// Mux selector, except defaults to 0 instead of panic.
+pub fn mux0<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
+    let idxk = keys.first().expect("Mux Node will have index node");
+    let index = calc.get(idxk) + 1.0;
+    let key = keys.get(index as usize);
+    key.map(|x| calc.get(x)).unwrap_or(0.0)
+}
+
 /// Same as sum node, but adds one to it.
 pub fn sum_plus_one<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
     keys.iter().map(|k| calc.get(k)).sum::<f32>() + 1.0
+}
+
+/// Negation node evaluator. The first node passed in will be negated and returned.
+pub fn neg<K: Clone + Eq + Hash + 'static>(calc: &mut Calculator<K>, keys: &[K]) -> f32 {
+    -calc.get(
+        keys.first()
+            .expect("neg nodes should be passed exactly one key"),
+    )
 }

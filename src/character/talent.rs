@@ -71,18 +71,18 @@ impl Talent {
     /// Creates a vector of all conditions that this talent meets
     pub fn conditions_met(&self) -> Vec<Option<Condition>> {
         [
-            self.attribute.map(|x| Condition::Attribute(x)),
-            self.category.map(|x| Condition::Category(x)),
+            self.attribute.map(Condition::Attribute),
+            self.category.map(Condition::Category),
         ]
         .into_iter()
         .filter(|x| x.is_some())
-        .chain(None.into_iter())
+        .chain(None)
         .collect()
     }
 }
-impl Mul<f64> for &Talent {
+impl Mul<f32> for &Talent {
     type Output = Talent;
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Self::Output {
             category: self.category,
             attribute: self.attribute,
@@ -91,8 +91,8 @@ impl Mul<f64> for &Talent {
         }
     }
 }
-impl MulAssign<f64> for Talent {
-    fn mul_assign(&mut self, rhs: f64) {
+impl MulAssign<f32> for Talent {
+    fn mul_assign(&mut self, rhs: f32) {
         for scaling in self.scalings.iter_mut() {
             *scaling *= rhs;
         }

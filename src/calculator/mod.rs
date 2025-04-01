@@ -37,7 +37,7 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
     /// After calling this function, the value computed will be cached.
     pub fn get(&mut self, key: &K) -> f32 {
         if let Some(val) = self.values.get(key) {
-            return val.clone();
+            return *val;
         }
         let val = self
             .rules
@@ -108,7 +108,7 @@ impl<'a, K: Clone + Eq + Hash> Calculator<'a, K> {
     }
 }
 
-impl<'a, K: Clone + Eq + Hash + Debug> Calculator<'a, K> {
+impl<K: Clone + Eq + Hash + Debug> Calculator<'_, K> {
     /// Debug prints the sheets current data
     pub fn print_sheet_state(&self) {
         println!("{:?}", self.values);
