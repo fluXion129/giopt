@@ -31,11 +31,25 @@ pub enum ElementalReaction {
     ReverseMelt,
 }
 impl ElementalReaction {
-    pub fn amp_rxn_type_calcindex(&self) -> f32 {
-        match *self {
-            Self::ForwardVaporize | Self::ReverseVaporize => 0.0,
-            Self::ForwardMelt | Self::ReverseMelt => 1.0,
+    /// Returns the calcindex for the amp reaction type.
+    ///
+    /// 0 for Vaporize, 1 for Melt, 2 for anything else.
+    pub fn amp_rxn_type_calcindex(x: Option<Self>) -> f32 {
+        match x {
+            Some(Self::ForwardVaporize) | Some(Self::ReverseVaporize) => 0.0,
+            Some(Self::ForwardMelt) | Some(Self::ReverseMelt) => 1.0,
             _ => 2.0,
+        }
+    }
+
+    /// Returns the amplifying reaction base multiplier.
+    ///
+    /// 2.0 for forward amp reactions, 1.5 for reverse amp reactions, 1.0 for everything else
+    pub fn amp_rxn_mult(x: Option<Self>) -> f32 {
+        match x {
+            Some(Self::ForwardVaporize) | Some(Self::ForwardMelt) => 2.0,
+            Some(Self::ReverseVaporize) | Some(Self::ReverseMelt) => 1.5,
+            _ => 1.0,
         }
     }
     // pub fn is_amp_reaction(&self) -> bool {

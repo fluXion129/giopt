@@ -1,8 +1,9 @@
 use std::hash::Hash;
 
 use crate::{
-    calculator::Calculator,
+    calculator::{CalcKey, Calculator},
     damage::Attribute,
+    element::reaction::ElementalReaction,
     stats::{Stat, StatSheet, Type as StatType},
 };
 
@@ -12,6 +13,8 @@ pub enum GCK {
     B(B),
     L(L),
 }
+
+impl CalcKey for GCK {}
 
 // This is for convenience of inputting character stats.
 impl From<StatType> for GCK {
@@ -93,7 +96,7 @@ pub enum S {
     EM,
 }
 
-// Contains the actual definition of the relations between GCKs.
+/// Contains the actual definition of the relations between GCKs.
 pub mod gi_rules_def;
 pub use gi_rules_def::GI_RULES;
 
@@ -111,5 +114,24 @@ impl Calculator<'_, GCK> {
         for (&st, &sv) in statsheet.data() {
             self.set(st.into(), sv);
         }
+    }
+
+    // TODO - Integrating various stat sources into the calculator.
+    // One of the things that I need to make in order for this system to really take advantage of
+    // its capabilities is more detailed descriptions of stat breakdowns. Being able to recompute
+    // the total stats from pieces. I suppose it could be a separate calculator as well.
+
+    /// Sets up the calculator for a specific reaction or lack of reaction.
+    ///
+    /// Sets AmpRxnType, BaseAmpRxnMult
+    pub fn set_rxn(&mut self, rxn: Option<ElementalReaction>) {
+        self.set(
+            GCK::L(L::AmpRxnType),
+            ElementalReaction::amp_rxn_type_calcindex(rxn),
+        );
+        self.set(
+            GCK::L(L::BaseAmpRxnMult),
+            ElementalReaction::amp_rxn_mult(rxn),
+        );
     }
 }

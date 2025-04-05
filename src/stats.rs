@@ -95,9 +95,7 @@ pub enum Type {
 
     ElementalMastery,
 
-    // Conditional Crit Stats exist. It's actually possible
-    // that all stats can be conditional... Not sure what to
-    // do with that.
+    // Conditional Crit Stats exist.
     CritRate,
     CritDmg,
 
@@ -110,13 +108,13 @@ pub enum Type {
     HealingBonus,
     IncomingHealingBonus,
 
-    DMGMult(Option<Condition>),
+    DMGMult(Condition),
 
     // You can only have resistance to attributes for some reason, not any general condition
     AttributeRES(damage::Attribute),
 
-    BaseDMGMult(Option<Condition>),
-    BaseDMGFlat(Option<Condition>),
+    BaseDMGMult(Condition),
+    BaseDMGFlat(Condition),
 
     // Reaction DMG bonuses are dealt with in the Reaction effect, and thus
     // I think they warrant their own type of stat rather than being handled with any condition.
@@ -125,7 +123,7 @@ pub enum Type {
     // TODO - Def Ignore? Def Shred? Enemy Debuffs? Character Temporary Buffs?
     // Def ignore should be a character stat because it's character-specific.
     // Def shred and Def Ignore stack multiplicatively
-    DefIgnore(Option<Condition>),
+    DefIgnore(Condition),
 }
 
 // For Stats that only apply to some types of damage
@@ -133,6 +131,7 @@ pub enum Type {
 pub enum Condition {
     Attribute(damage::Attribute),
     Category(damage::Category),
+    None,
 }
 impl From<damage::Attribute> for Condition {
     fn from(value: damage::Attribute) -> Self {

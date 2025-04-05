@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use crate::{
     calculator::{
-        rules::{mux, mux0, mux1, neg, product, sum, sum_plus_one, Rule, Rules},
+        rules::{mux, mux_or_0, mux_or_1, neg, product, sum, sum_plus_one, Rule, Rules},
         Calculator,
     },
     damage::{Attribute, Category},
@@ -107,7 +107,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
         // TODO - ADD Conditional BaseDMG modifiers
         GCK::B(B::BaseDMGMult) => sum_plus_one[
-            GCK::L(L::Stat(StatType::BaseDMGMult(None)))
+            GCK::L(L::Stat(StatType::BaseDMGMult(Condition::None)))
         ];
         GCK::B(B::BaseDMG) => sum[
             GCK::B(B::EvalScaling(S::Atk)),
@@ -134,29 +134,29 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
 
         // Evaluating DMGBonusMult
         GCK::B(B::DMGBonusMult) => sum_plus_one[
-            GCK::L(L::Stat(StatType::DMGMult(None))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::None))),
             GCK::B(B::AttributeDMGBonusMult),
             GCK::B(B::CategoryDMGBonusMult),
             GCK::L(L::TargetDMGBonusMult)
         ];
         GCK::B(B::AttributeDMGBonusMult) => mux[
             GCK::L(L::Attribute),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Anemo)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Anemo)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Geo)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Electro)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Dendro)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Hydro)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Pyro)))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Attribute(Attribute::Elemental(Element::Cryo))))))
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Anemo))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Anemo))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Geo))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Electro))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Dendro))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Hydro))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Pyro))))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Cryo)))))
         ];
         GCK::B(B::CategoryDMGBonusMult) => mux[
             GCK::L(L::Category),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Category(Category::NormalAttack))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Category(Category::ChargedAttack))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Category(Category::PlungeAttack))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Category(Category::ElementalSkill))))),
-            GCK::L(L::Stat(StatType::DMGMult(Some(Condition::Category(Category::ElementalBurst)))))
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::NormalAttack)))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::ChargedAttack)))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::PlungeAttack)))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::ElementalSkill)))),
+            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::ElementalBurst))))
         ];
 
         // Evaluating TargetDEFMult
@@ -203,12 +203,11 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         ];
 
         // Evaluating AmpRxnMult
-        GCK::B(B::AmpRxnMult) => mux1[
+        GCK::B(B::AmpRxnMult) => mux_or_1[
             GCK::L(L::AmpRxnType),
             GCK::B(B::PotentialAmpRxnMult),
             GCK::B(B::PotentialAmpRxnMult)
         ];
-
         GCK::B(B::PotentialAmpRxnMult) => product[
             GCK::L(L::BaseAmpRxnMult),
             GCK::B(B::AmpRxnTotalBonusMult)
@@ -220,7 +219,7 @@ pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
         GCK::B(B::AmpRxnEMMult) => amp_rxn_em_mult[
             GCK::L(L::Stat(StatType::ElementalMastery))
         ];
-        GCK::B(B::AmpRxnBonusMult) => mux0[
+        GCK::B(B::AmpRxnBonusMult) => mux_or_0[
             GCK::L(L::AmpRxnType),
             GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardVaporize))),
             GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardMelt)))

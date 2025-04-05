@@ -4,24 +4,13 @@ use giopt::{
     calculator::Calculator,
     damage::{Attribute, Category},
     element::{reaction::ElementalReaction::*, Element::*},
-    stats::{StatSheet, Type::*},
+    stats::{Condition, StatSheet, Type::*},
     B, GCK, GI_RULES, L, S,
 };
 
 fn main() {
     // Old Calculator Testing
     // // Arlecchino Melt testing
-    let stats = StatSheet::from([
-        (Level, 90.0),
-        (MaxHP, 20626.0),
-        (Atk, 4514.2),
-        (Def, 765.0),
-        (ElementalMastery, 380.0),
-        (CritRate, 0.772),
-        (CritDmg, 1.918),
-        (DMGMult(Some(Pyro.into())), 1.416),
-        (DMGMult(None), 0.18),
-    ]);
     // let c2burst = Talent::new(
     //     None,
     //     Some(Attribute::Elemental(Pyro)),
@@ -60,24 +49,30 @@ fn main() {
             (GCK::L(L::Scaling(S::Atk)), 9.0),
             (GCK::L(L::Attribute), Attribute::from(Pyro).calcindex()),
             (GCK::L(L::Category), Category::NormalAttack.calcindex()),
-            (GCK::L(L::BaseAmpRxnMult), 2.0),
-            (GCK::L(L::AmpRxnType), ForwardMelt.amp_rxn_type_calcindex()),
-            // (Level.into(), 90.0),
-            // (MaxHP.into(), 20626.0),
-            // (Atk.into(), 4514.2),
-            // (Def.into(), 765.0),
-            // (ElementalMastery.into(), 380.0),
-            // (CritRate.into(), 0.772),
-            // (CritDmg.into(), 1.918),
-            // (DMGMult(None).into(), 0.18),
-            // (DMGMult(Some(Pyro.into())).into(), 1.416),
-            // (DMGMult(Some(Cryo.into())).into(), 0.40),
         ]),
         &rules,
     );
 
-    // testing import_stat_sheet.
+    let stats = StatSheet::from([
+        (Level, 90.0),
+        (MaxHP, 21390.0),
+        (Atk, 4500.0),
+        (Def, 764.71),
+        (ElementalMastery, 333.16),
+        (CritRate, 0.819),
+        (CritDmg, 2.104),
+        (DMGMult(Pyro.into()), 1.416),
+        (DMGMult(Condition::None), 0.18),
+    ]);
+    // testing import_stat_sheet. I probably want to not use this method?
     calc.import_stat_sheet(&stats);
+    calc.set_rxn(Some(ForwardMelt));
+
+    calc.get(&GCK::B(B::DamageInstanceOutput));
+
+    // calc.set(GCK::L(L::Scaling(S::EM)), 1.0);
+
+    // calc.add(GCK::L(L::Stat(ElementalMastery)), 250.0);
 
     macro_rules! calc_print {
         ($($n:expr),*) => {

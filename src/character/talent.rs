@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::once;
 use std::ops::{Mul, MulAssign};
 use std::time::Duration;
 
@@ -69,14 +70,14 @@ impl Talent {
     }
 
     /// Creates a vector of all conditions that this talent meets
-    pub fn conditions_met(&self) -> Vec<Option<Condition>> {
+    pub fn conditions_met(&self) -> Vec<Condition> {
         [
             self.attribute.map(Condition::Attribute),
             self.category.map(Condition::Category),
         ]
         .into_iter()
-        .filter(|x| x.is_some())
-        .chain(None)
+        .filter_map(|x| x)
+        .chain(once(Condition::None))
         .collect()
     }
 }
