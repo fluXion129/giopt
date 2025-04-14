@@ -8,34 +8,17 @@ use crate::{
 };
 
 /// Genshin Calc Keys
+///
+/// "Reduct" keys should be given positive values
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GCK {
-    B(B),
-    L(L),
-}
-
-impl CalcKey for GCK {}
-
-// This is for convenience of inputting character stats.
-impl From<StatType> for GCK {
-    fn from(value: StatType) -> Self {
-        Self::L(L::Stat(value))
-    }
-}
-
-/// Branch Genshin Calc Keys - These are typically calculated from the Leaf Keys,
-/// but if you want to override the functionality of the calculator, it can be
-/// useful to manipulate these.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum B {
     DamageInstanceOutput,
 
     BaseDMGFinal,
     BaseDMGPostMult,
-    BaseDMGAdd,
     BaseDMGMult,
     BaseDMG,
-    EvalScaling(S),
+    EvalScaling(Scaling),
 
     DMGBonusMult,
     AttributeDMGBonusMult,
@@ -47,9 +30,10 @@ pub enum B {
     TargetRESMult,
     TargetRESFinal,
     TargetBaseRES,
-    TargetAttributeRES,
-    TargetAttributeRESReductNeg,
-    TargetAttributeRESReduct,
+    // These keys have to be labelled Sel to avoid clashing with the Individual Attribute-specific RES key name
+    SelTargetAttributeRES,
+    SelTargetAttributeRESReductNeg,
+    SelTargetAttributeRESReduct,
 
     AmpRxnMult,
     PotentialAmpRxnMult,
@@ -61,16 +45,12 @@ pub enum B {
     TotalCritRate,
     TotalCritDMG,
     AttributeCritDMG,
-}
 
-/// Leaf Genshin Calc Keys
-/// Have no rule associated with them - the keys you will need to put values for.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum L {
+    // Past this point are the "Leaf Keys" - Intended for most frequent use
     Attribute,
     Category,
 
-    Scaling(S),
+    Scaling(Scaling),
     BaseDMGAdd,
 
     Stat(StatType),
@@ -78,18 +58,29 @@ pub enum L {
     TargetDMGBonusMult,
 
     TargetLevel,
-    // This needs to be positive!
     TargetDEFReduct,
     TargetAttributeRES(Attribute),
-    // This needs to be negative!
     TargetAttributeRESReduct(Attribute),
 
     BaseAmpRxnMult,
     AmpRxnType,
 }
 
+impl CalcKey for GCK {}
+
+// This is for convenience of inputting character stats.
+impl From<StatType> for GCK {
+    fn from(value: StatType) -> Self {
+        Self::Stat(value)
+    }
+}
+
+/// A type containing all current valid scaling stats. It is likely that other scalings will be implemented.
+///
+/// I may want scalings to be arbitrary functions, but that doesn't mesh well with the calculator. If I think of a way
+/// to do that, this may become obsolete
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum S {
+pub enum Scaling {
     Atk,
     Def,
     MaxHP,
@@ -126,12 +117,9 @@ impl Calculator<'_, GCK> {
     /// Sets AmpRxnType, BaseAmpRxnMult
     pub fn set_rxn(&mut self, rxn: Option<ElementalReaction>) {
         self.set(
-            GCK::L(L::AmpRxnType),
+            GCK::AmpRxnType,
             ElementalReaction::amp_rxn_type_calcindex(rxn),
         );
-        self.set(
-            GCK::L(L::BaseAmpRxnMult),
-            ElementalReaction::amp_rxn_mult(rxn),
-        );
+        self.set(GCK::BaseAmpRxnMult, ElementalReaction::amp_rxn_mult(rxn));
     }
 }

@@ -10,7 +10,7 @@ use crate::{
     stats::{Condition, Type as StatType},
 };
 
-use super::{B, GCK, L, S};
+use super::{Scaling, GCK};
 
 // Specialized calculator node evaluators
 
@@ -87,155 +87,155 @@ macro_rules! rule_gen {
 pub const GI_RULES: LazyLock<Rules<GCK>> = LazyLock::new(|| {
     rule_gen!(
         // Top level Damage formula
-        GCK::B(B::DamageInstanceOutput) => product[
-            GCK::B(B::BaseDMGFinal),
-            GCK::B(B::DMGBonusMult),
-            GCK::B(B::TargetDEFMult),
-            GCK::B(B::TargetRESMult),
-            GCK::B(B::AmpRxnMult),
-            GCK::B(B::CritMult)
+        GCK::DamageInstanceOutput => product[
+            GCK::BaseDMGFinal,
+            GCK::DMGBonusMult,
+            GCK::TargetDEFMult,
+            GCK::TargetRESMult,
+            GCK::AmpRxnMult,
+            GCK::CritMult
         ];
 
         // Evaluating BaseDMGFinal
-        GCK::B(B::BaseDMGFinal) => sum[
-            GCK::B(B::BaseDMGPostMult),
-            GCK::L(L::BaseDMGAdd)
+        GCK::BaseDMGFinal => sum[
+            GCK::BaseDMGPostMult,
+            GCK::BaseDMGAdd
         ];
-        GCK::B(B::BaseDMGPostMult) => product[
-            GCK::B(B::BaseDMG),
-            GCK::B(B::BaseDMGMult)
+        GCK::BaseDMGPostMult => product[
+            GCK::BaseDMG,
+            GCK::BaseDMGMult
         ];
         // TODO - ADD Conditional BaseDMG modifiers
-        GCK::B(B::BaseDMGMult) => sum_plus_one[
-            GCK::L(L::Stat(StatType::BaseDMGMult(Condition::None)))
+        GCK::BaseDMGMult => sum_plus_one[
+            GCK::Stat(StatType::BaseDMGMult(Condition::None))
         ];
-        GCK::B(B::BaseDMG) => sum[
-            GCK::B(B::EvalScaling(S::Atk)),
-            GCK::B(B::EvalScaling(S::MaxHP)),
-            GCK::B(B::EvalScaling(S::Def)),
-            GCK::B(B::EvalScaling(S::EM))
+        GCK::BaseDMG => sum[
+            GCK::EvalScaling(Scaling::Atk),
+            GCK::EvalScaling(Scaling::MaxHP),
+            GCK::EvalScaling(Scaling::Def),
+            GCK::EvalScaling(Scaling::EM)
         ];
-        GCK::B(B::EvalScaling(S::Atk)) => product[
-            GCK::L(L::Scaling(S::Atk)),
-            GCK::L(L::Stat(StatType::Atk))
+        GCK::EvalScaling(Scaling::Atk) => product[
+            GCK::Scaling(Scaling::Atk),
+            GCK::Stat(StatType::Atk)
         ];
-        GCK::B(B::EvalScaling(S::MaxHP)) => product[
-            GCK::L(L::Scaling(S::MaxHP)),
-            GCK::L(L::Stat(StatType::MaxHP))
+        GCK::EvalScaling(Scaling::MaxHP) => product[
+            GCK::Scaling(Scaling::MaxHP),
+            GCK::Stat(StatType::MaxHP)
         ];
-        GCK::B(B::EvalScaling(S::Def)) => product[
-            GCK::L(L::Scaling(S::Def)),
-            GCK::L(L::Stat(StatType::Def))
+        GCK::EvalScaling(Scaling::Def) => product[
+            GCK::Scaling(Scaling::Def),
+            GCK::Stat(StatType::Def)
         ];
-        GCK::B(B::EvalScaling(S::EM)) => product[
-            GCK::L(L::Scaling(S::EM)),
-            GCK::L(L::Stat(StatType::ElementalMastery))
+        GCK::EvalScaling(Scaling::EM) => product[
+            GCK::Scaling(Scaling::EM),
+            GCK::Stat(StatType::ElementalMastery)
         ];
 
         // Evaluating DMGBonusMult
-        GCK::B(B::DMGBonusMult) => sum_plus_one[
-            GCK::L(L::Stat(StatType::DMGMult(Condition::None))),
-            GCK::B(B::AttributeDMGBonusMult),
-            GCK::B(B::CategoryDMGBonusMult),
-            GCK::L(L::TargetDMGBonusMult)
+        GCK::DMGBonusMult => sum_plus_one[
+            GCK::Stat(StatType::DMGMult(Condition::None)),
+            GCK::AttributeDMGBonusMult,
+            GCK::CategoryDMGBonusMult,
+            GCK::TargetDMGBonusMult
         ];
-        GCK::B(B::AttributeDMGBonusMult) => mux[
-            GCK::L(L::Attribute),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Anemo))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Anemo))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Geo))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Electro))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Dendro))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Hydro))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Pyro))))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Cryo)))))
+        GCK::AttributeDMGBonusMult => mux[
+            GCK::Attribute,
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Anemo)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Anemo)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Geo)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Electro)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Dendro)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Hydro)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Pyro)))),
+            GCK::Stat(StatType::DMGMult(Condition::Attribute(Attribute::Elemental(Element::Cryo))))
         ];
-        GCK::B(B::CategoryDMGBonusMult) => mux[
-            GCK::L(L::Category),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::NormalAttack)))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::ChargedAttack)))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::PlungeAttack)))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::ElementalSkill)))),
-            GCK::L(L::Stat(StatType::DMGMult(Condition::Category(Category::ElementalBurst))))
+        GCK::CategoryDMGBonusMult => mux[
+            GCK::Category,
+            GCK::Stat(StatType::DMGMult(Condition::Category(Category::NormalAttack))),
+            GCK::Stat(StatType::DMGMult(Condition::Category(Category::ChargedAttack))),
+            GCK::Stat(StatType::DMGMult(Condition::Category(Category::PlungeAttack))),
+            GCK::Stat(StatType::DMGMult(Condition::Category(Category::ElementalSkill))),
+            GCK::Stat(StatType::DMGMult(Condition::Category(Category::ElementalBurst)))
         ];
 
         // Evaluating TargetDEFMult
-        GCK::B(B::TargetDEFMult) => def_mult[
-            GCK::L(L::Stat(StatType::Level)),
-            GCK::L(L::TargetLevel),
-            GCK::L(L::TargetDEFReduct),
-            GCK::B(B::TotalDEFIgnore)
+        GCK::TargetDEFMult => def_mult[
+            GCK::Stat(StatType::Level),
+            GCK::TargetLevel,
+            GCK::TargetDEFReduct,
+            GCK::TotalDEFIgnore
         ];
         // todo - TotalDEFIgnore
 
         // Evaluating TargetRESMult
-        GCK::B(B::TargetRESMult) => res_mult[
-            GCK::B(B::TargetRESFinal)
+        GCK::TargetRESMult => res_mult[
+            GCK::TargetRESFinal
         ];
-        GCK::B(B::TargetRESFinal) => sum[
-            GCK::B(B::TargetAttributeRES),
-            GCK::B(B::TargetAttributeRESReductNeg)
+        GCK::TargetRESFinal => sum[
+            GCK::SelTargetAttributeRES,
+            GCK::SelTargetAttributeRESReductNeg
         ];
-        GCK::B(B::TargetAttributeRES) => mux[
-            GCK::L(L::Attribute),
-            GCK::L(L::TargetAttributeRES(Attribute::Physical)),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Anemo))),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Geo))),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Electro))),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Dendro))),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Hydro))),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Pyro))),
-            GCK::L(L::TargetAttributeRES(Attribute::Elemental(Element::Cryo)))
+        GCK::SelTargetAttributeRES => mux[
+            GCK::Attribute,
+            GCK::TargetAttributeRES(Attribute::Physical),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Anemo)),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Geo)),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Electro)),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Dendro)),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Hydro)),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Pyro)),
+            GCK::TargetAttributeRES(Attribute::Elemental(Element::Cryo))
         ];
-        GCK::B(B::TargetAttributeRESReductNeg) => neg[
-            GCK::B(B::TargetAttributeRESReduct)
+        GCK::SelTargetAttributeRESReductNeg => neg[
+            GCK::SelTargetAttributeRESReduct
         ];
-        GCK::B(B::TargetAttributeRESReduct) => mux[
-            GCK::L(L::Attribute),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Physical)),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Anemo))),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Geo))),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Electro))),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Dendro))),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Hydro))),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Pyro))),
-            GCK::L(L::TargetAttributeRESReduct(Attribute::Elemental(Element::Cryo)))
+        GCK::SelTargetAttributeRESReduct => mux[
+            GCK::Attribute,
+            GCK::TargetAttributeRESReduct(Attribute::Physical),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Anemo)),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Geo)),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Electro)),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Dendro)),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Hydro)),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Pyro)),
+            GCK::TargetAttributeRESReduct(Attribute::Elemental(Element::Cryo))
         ];
 
         // Evaluating AmpRxnMult
-        GCK::B(B::AmpRxnMult) => mux_or_1[
-            GCK::L(L::AmpRxnType),
-            GCK::B(B::PotentialAmpRxnMult),
-            GCK::B(B::PotentialAmpRxnMult)
+        GCK::AmpRxnMult => mux_or_1[
+            GCK::AmpRxnType,
+            GCK::PotentialAmpRxnMult,
+            GCK::PotentialAmpRxnMult
         ];
-        GCK::B(B::PotentialAmpRxnMult) => product[
-            GCK::L(L::BaseAmpRxnMult),
-            GCK::B(B::AmpRxnTotalBonusMult)
+        GCK::PotentialAmpRxnMult => product[
+            GCK::BaseAmpRxnMult,
+            GCK::AmpRxnTotalBonusMult
         ];
-        GCK::B(B::AmpRxnTotalBonusMult) => sum_plus_one[
-            GCK::B(B::AmpRxnEMMult),
-            GCK::B(B::AmpRxnBonusMult)
+        GCK::AmpRxnTotalBonusMult => sum_plus_one[
+            GCK::AmpRxnEMMult,
+            GCK::AmpRxnBonusMult
         ];
-        GCK::B(B::AmpRxnEMMult) => amp_rxn_em_mult[
-            GCK::L(L::Stat(StatType::ElementalMastery))
+        GCK::AmpRxnEMMult => amp_rxn_em_mult[
+            GCK::Stat(StatType::ElementalMastery)
         ];
-        GCK::B(B::AmpRxnBonusMult) => mux_or_0[
-            GCK::L(L::AmpRxnType),
-            GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardVaporize))),
-            GCK::L(L::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardMelt)))
+        GCK::AmpRxnBonusMult => mux_or_0[
+            GCK::AmpRxnType,
+            GCK::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardVaporize)),
+            GCK::Stat(StatType::RxnDMGMult(ElementalReaction::ForwardMelt))
         ];
 
-        // Evaluate CritMult
-        GCK::B(B::CritMult) => crit_mult[
-            GCK::B(B::TotalCritRate),
-            GCK::B(B::TotalCritDMG)
+        // Evaluatee CritMult
+        GCK::CritMult => crit_mult[
+            GCK::TotalCritRate,
+            GCK::TotalCritDMG
         ];
-        GCK::B(B::TotalCritRate) => sum[
-            GCK::L(L::Stat(StatType::CritRate))
+        GCK::TotalCritRate => sum[
+            GCK::Stat(StatType::CritRate)
             // TODO - ADD Conditional Crit Stats
         ];
-        GCK::B(B::TotalCritDMG) => sum [
-            GCK::L(L::Stat(StatType::CritDmg))
+        GCK::TotalCritDMG => sum [
+            GCK::Stat(StatType::CritDmg)
             // TODO - ADD Conditional Crit Stats
         ]
     )

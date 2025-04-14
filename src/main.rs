@@ -5,7 +5,7 @@ use giopt::{
     damage::{Attribute, Category},
     element::{reaction::ElementalReaction::*, Element::*},
     stats::{Condition, StatSheet, Type::*},
-    B, GCK, GI_RULES, L, S,
+    Scaling, GCK, GI_RULES,
 };
 
 fn main() {
@@ -43,12 +43,12 @@ fn main() {
     // GI_RULES testing
     let mut calc = Calculator::from_components(
         HashMap::from([
-            (GCK::L(L::TargetLevel), 103.0),
-            (GCK::L(L::TargetAttributeRES(Pyro.into())), 0.1),
-            (GCK::L(L::TargetAttributeRESReduct(Pyro.into())), 0.6),
-            (GCK::L(L::Scaling(S::Atk)), 9.0),
-            (GCK::L(L::Attribute), Attribute::from(Pyro).calcindex()),
-            (GCK::L(L::Category), Category::NormalAttack.calcindex()),
+            (GCK::TargetLevel, 103.0),
+            (GCK::TargetAttributeRES(Pyro.into()), 0.1),
+            (GCK::TargetAttributeRESReduct(Pyro.into()), 0.6),
+            (GCK::Scaling(Scaling::Atk), 9.0),
+            (GCK::Attribute, Attribute::from(Pyro).calcindex()),
+            (GCK::Category, Category::NormalAttack.calcindex()),
         ]),
         &rules,
     );
@@ -68,7 +68,7 @@ fn main() {
     calc.import_stat_sheet(&stats);
     calc.set_rxn(Some(ForwardMelt));
 
-    calc.get(&GCK::B(B::DamageInstanceOutput));
+    calc.get(&GCK::DamageInstanceOutput);
 
     // calc.set(GCK::L(L::Scaling(S::EM)), 1.0);
 
@@ -81,20 +81,20 @@ fn main() {
     }
 
     calc_print!(
-        GCK::B(B::DamageInstanceOutput),
-        GCK::B(B::BaseDMGFinal),
-        // GCK::B(B::BaseDMGPostMult),
-        // GCK::B(B::BaseDMG),
-        // GCK::B(B::BaseDMGMult),
-        GCK::B(B::DMGBonusMult),
-        GCK::B(B::TargetDEFMult),
-        // GCK::L(L::Stat(Level)),
-        // GCK::L(L::TargetLevel),
-        // GCK::L(L::TargetDEFReduct),
-        // GCK::B(B::TotalDEFIgnore),
-        GCK::B(B::TargetRESMult),
-        GCK::B(B::AmpRxnMult),
-        // GCK::B(B::AmpRxnTotalBonusMult),
-        GCK::B(B::CritMult)
+        GCK::DamageInstanceOutput,
+        GCK::BaseDMGFinal,
+        // GCK::BaseDMGPostMult,
+        // GCK::BaseDMG,
+        // GCK::BaseDMGMult,
+        GCK::DMGBonusMult,
+        GCK::TargetDEFMult,
+        // GCK::Stat(Level),
+        // GCK::TargetLevel,
+        // GCK::TargetDEFReduct,
+        // GCK::TotalDEFIgnore,
+        GCK::TargetRESMult,
+        GCK::AmpRxnMult,
+        // GCK::AmpRxnTotalBonusMult,
+        GCK::CritMult
     );
 }
